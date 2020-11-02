@@ -1,0 +1,386 @@
+
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>google.cloud.spanner_dbapi.connection &#8212; google-cloud-spanner-django 2.2.0a1 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for google.cloud.spanner_dbapi.connection</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2020 Google LLC</span>
+<span class="c1">#</span>
+<span class="c1"># Use of this source code is governed by a BSD-style</span>
+<span class="c1"># license that can be found in the LICENSE file or at</span>
+<span class="c1"># https://developers.google.com/open-source/licenses/bsd</span>
+
+<span class="sd">&quot;&quot;&quot;DB-API Connection for the Google Cloud Spanner.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">google.api_core.gapic_v1.client_info</span> <span class="kn">import</span> <span class="n">ClientInfo</span>
+<span class="kn">from</span> <span class="nn">google.cloud</span> <span class="kn">import</span> <span class="n">spanner_v1</span> <span class="k">as</span> <span class="n">spanner</span>
+
+<span class="kn">from</span> <span class="nn">google.cloud.spanner_dbapi.cursor</span> <span class="kn">import</span> <span class="n">Cursor</span>
+<span class="kn">from</span> <span class="nn">google.cloud.spanner_dbapi.exceptions</span> <span class="kn">import</span> <span class="n">InterfaceError</span>
+<span class="kn">from</span> <span class="nn">google.cloud.spanner_dbapi.version</span> <span class="kn">import</span> <span class="n">DEFAULT_USER_AGENT</span>
+<span class="kn">from</span> <span class="nn">google.cloud.spanner_dbapi.version</span> <span class="kn">import</span> <span class="n">PY_VERSION</span>
+
+
+<span class="n">AUTOCOMMIT_MODE_WARNING</span> <span class="o">=</span> <span class="s2">&quot;This method is non-operational in autocommit mode&quot;</span>
+
+
+<div class="viewcode-block" id="Connection"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.connection.Connection">[docs]</a><span class="k">class</span> <span class="nc">Connection</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Representation of a DB-API connection to a Cloud Spanner database.</span>
+
+<span class="sd">    You most likely don&#39;t need to instantiate `Connection` objects</span>
+<span class="sd">    directly, use the `connect` module function instead.</span>
+
+<span class="sd">    :type instance: :class:`~google.cloud.spanner_v1.instance.Instance`</span>
+<span class="sd">    :param instance: Cloud Spanner instance to connect to.</span>
+
+<span class="sd">    :type database: :class:`~google.cloud.spanner_v1.database.Database`</span>
+<span class="sd">    :param database: The database to which the connection is linked.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">database</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_instance</span> <span class="o">=</span> <span class="n">instance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_database</span> <span class="o">=</span> <span class="n">database</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ddl_statements</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transaction</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_session</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_closed</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_autocommit</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">autocommit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Autocommit mode flag for this connection.</span>
+
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        :returns: Autocommit mode flag value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_autocommit</span>
+
+    <span class="nd">@autocommit</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">autocommit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Change this connection autocommit mode. Setting this value to True</span>
+<span class="sd">        while a transaction is active will commit the current transaction.</span>
+
+<span class="sd">        :type value: bool</span>
+<span class="sd">        :param value: New autocommit mode state.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_autocommit</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_autocommit</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">database</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Database to which this connection relates.</span>
+
+<span class="sd">        :rtype: :class:`~google.cloud.spanner_v1.database.Database`</span>
+<span class="sd">        :returns: The related database object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_database</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">instance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Instance to which this connection relates.</span>
+
+<span class="sd">        :rtype: :class:`~google.cloud.spanner_v1.instance.Instance`</span>
+<span class="sd">        :returns: The related instance object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_instance</span>
+
+    <span class="k">def</span> <span class="nf">_session_checkout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a Cloud Spanner session from the pool.</span>
+
+<span class="sd">        If there is already a session associated with</span>
+<span class="sd">        this connection, it&#39;ll be used instead.</span>
+
+<span class="sd">        :rtype: :class:`google.cloud.spanner_v1.session.Session`</span>
+<span class="sd">        :returns: Cloud Spanner session object ready to use.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_session</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_session</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">_pool</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_session</span>
+
+    <span class="k">def</span> <span class="nf">_release_session</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Release the currently used Spanner session.</span>
+
+<span class="sd">        The session will be returned into the sessions pool.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">_pool</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_session</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_session</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="Connection.transaction_checkout"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.connection.Connection.transaction_checkout">[docs]</a>    <span class="k">def</span> <span class="nf">transaction_checkout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a Cloud Spanner transaction.</span>
+
+<span class="sd">        Begin a new transaction, if there is no transaction in</span>
+<span class="sd">        this connection yet. Return the begun one otherwise.</span>
+
+<span class="sd">        The method is non operational in autocommit mode.</span>
+
+<span class="sd">        :rtype: :class:`google.cloud.spanner_v1.transaction.Transaction`</span>
+<span class="sd">        :returns: A Cloud Spanner transaction object, ready to use.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">autocommit</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transaction</span>
+                <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transaction</span><span class="o">.</span><span class="n">committed</span>
+                <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transaction</span><span class="o">.</span><span class="n">rolled_back</span>
+            <span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_transaction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_session_checkout</span><span class="p">()</span><span class="o">.</span><span class="n">transaction</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_transaction</span><span class="o">.</span><span class="n">begin</span><span class="p">()</span>
+
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transaction</span></div>
+
+    <span class="k">def</span> <span class="nf">_raise_if_closed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Helper to check the connection state before running a query.</span>
+<span class="sd">        Raises an exception if this connection is closed.</span>
+
+<span class="sd">        :raises: :class:`InterfaceError`: if this connection is closed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_closed</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InterfaceError</span><span class="p">(</span><span class="s2">&quot;connection is already closed&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Connection.close"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.connection.Connection.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Closes this connection.</span>
+
+<span class="sd">        The connection will be unusable from this point forward. If the</span>
+<span class="sd">        connection has an active transaction, it will be rolled back.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_transaction</span>
+            <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transaction</span><span class="o">.</span><span class="n">committed</span>
+            <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transaction</span><span class="o">.</span><span class="n">rolled_back</span>
+        <span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_transaction</span><span class="o">.</span><span class="n">rollback</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_closed</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="Connection.commit"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.connection.Connection.commit">[docs]</a>    <span class="k">def</span> <span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Commits any pending transaction to the database.</span>
+
+<span class="sd">        This method is non-operational in autocommit mode.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_autocommit</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">AUTOCOMMIT_MODE_WARNING</span><span class="p">,</span> <span class="ne">UserWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transaction</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_transaction</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_release_session</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Connection.rollback"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.connection.Connection.rollback">[docs]</a>    <span class="k">def</span> <span class="nf">rollback</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Rolls back any pending transaction.</span>
+
+<span class="sd">        This is a no-op if there is no active transaction or if the connection</span>
+<span class="sd">        is in autocommit mode.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_autocommit</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">AUTOCOMMIT_MODE_WARNING</span><span class="p">,</span> <span class="ne">UserWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transaction</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_transaction</span><span class="o">.</span><span class="n">rollback</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_release_session</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Connection.cursor"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.connection.Connection.cursor">[docs]</a>    <span class="k">def</span> <span class="nf">cursor</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Factory to create a DB-API Cursor.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_raise_if_closed</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">Cursor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Connection.run_prior_DDL_statements"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.connection.Connection.run_prior_DDL_statements">[docs]</a>    <span class="k">def</span> <span class="nf">run_prior_DDL_statements</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_raise_if_closed</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ddl_statements</span><span class="p">:</span>
+            <span class="n">ddl_statements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ddl_statements</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ddl_statements</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">update_ddl</span><span class="p">(</span><span class="n">ddl_statements</span><span class="p">)</span><span class="o">.</span><span class="n">result</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">etype</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">traceback</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="connect"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.connection.connect">[docs]</a><span class="k">def</span> <span class="nf">connect</span><span class="p">(</span>
+    <span class="n">instance_id</span><span class="p">,</span>
+    <span class="n">database_id</span><span class="p">,</span>
+    <span class="n">project</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">credentials</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">pool</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">user_agent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates a connection to a Google Cloud Spanner database.</span>
+
+<span class="sd">    :type instance_id: str</span>
+<span class="sd">    :param instance_id: The ID of the instance to connect to.</span>
+
+<span class="sd">    :type database_id: str</span>
+<span class="sd">    :param database_id: The ID of the database to connect to.</span>
+
+<span class="sd">    :type project: str</span>
+<span class="sd">    :param project: (Optional) The ID of the project which owns the</span>
+<span class="sd">                    instances, tables and data. If not provided, will</span>
+<span class="sd">                    attempt to determine from the environment.</span>
+
+<span class="sd">    :type credentials: :class:`~google.auth.credentials.Credentials`</span>
+<span class="sd">    :param credentials: (Optional) The authorization credentials to attach to</span>
+<span class="sd">                        requests. These credentials identify this application</span>
+<span class="sd">                        to the service. If none are specified, the client will</span>
+<span class="sd">                        attempt to ascertain the credentials from the</span>
+<span class="sd">                        environment.</span>
+
+<span class="sd">    :type pool: Concrete subclass of</span>
+<span class="sd">                :class:`~google.cloud.spanner_v1.pool.AbstractSessionPool`.</span>
+<span class="sd">    :param pool: (Optional). Session pool to be used by database.</span>
+
+<span class="sd">    :type user_agent: str</span>
+<span class="sd">    :param user_agent: (Optional) User agent to be used with this connection&#39;s</span>
+<span class="sd">                       requests.</span>
+
+<span class="sd">    :rtype: :class:`google.cloud.spanner_dbapi.connection.Connection`</span>
+<span class="sd">    :returns: Connection object associated with the given Google Cloud Spanner</span>
+<span class="sd">              resource.</span>
+
+<span class="sd">    :raises: :class:`ValueError` in case of given instance/database</span>
+<span class="sd">             doesn&#39;t exist.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">client_info</span> <span class="o">=</span> <span class="n">ClientInfo</span><span class="p">(</span>
+        <span class="n">user_agent</span><span class="o">=</span><span class="n">user_agent</span> <span class="ow">or</span> <span class="n">DEFAULT_USER_AGENT</span><span class="p">,</span>
+        <span class="n">python_version</span><span class="o">=</span><span class="n">PY_VERSION</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">client</span> <span class="o">=</span> <span class="n">spanner</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span>
+        <span class="n">project</span><span class="o">=</span><span class="n">project</span><span class="p">,</span>
+        <span class="n">credentials</span><span class="o">=</span><span class="n">credentials</span><span class="p">,</span>
+        <span class="n">client_info</span><span class="o">=</span><span class="n">client_info</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">instance</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">instance</span><span class="p">(</span><span class="n">instance_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">instance</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;instance &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist.&quot;</span> <span class="o">%</span> <span class="n">instance_id</span><span class="p">)</span>
+
+    <span class="n">database</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">database</span><span class="p">(</span><span class="n">database_id</span><span class="p">,</span> <span class="n">pool</span><span class="o">=</span><span class="n">pool</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">database</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;database &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist.&quot;</span> <span class="o">%</span> <span class="n">database_id</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Connection</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">database</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">google-cloud-spanner-django</a></h1>
+
+
+
+<p class="blurb">Django API Libraries for google-cloud-spanner</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=googleapis&repo=python-spanner-django&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../connection-usage.html">DB API Connection</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api-reference.html">API Reference</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Changelog</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Google.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.3.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/googleapis/python-spanner-django" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

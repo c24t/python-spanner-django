@@ -1,0 +1,1553 @@
+
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>spanner_dbapi package &#8212; google-cloud-spanner-django 2.2.0a1 documentation</title>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="spanner-dbapi-package">
+<h1>spanner_dbapi package<a class="headerlink" href="#spanner-dbapi-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-google.cloud.spanner_dbapi.connection">
+<span id="spanner-dbapi-connection-module"></span><h2>spanner_dbapi.connection module<a class="headerlink" href="#module-google.cloud.spanner_dbapi.connection" title="Permalink to this headline">¶</a></h2>
+<p>DB-API Connection for the Google Cloud Spanner.</p>
+<dl class="py class">
+<dt id="google.cloud.spanner_dbapi.connection.Connection">
+<em class="property">class </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.connection.</code><code class="sig-name descname">Connection</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">instance</span></em>, <em class="sig-param"><span class="n">database</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/connection.html#Connection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.connection.Connection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Representation of a DB-API connection to a Cloud Spanner database.</p>
+<p>You most likely don’t need to instantiate <cite>Connection</cite> objects
+directly, use the <cite>connect</cite> module function instead.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>instance</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Instance</span></code>) – Cloud Spanner instance to connect to.</p></li>
+<li><p><strong>database</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Database</span></code>) – The database to which the connection is linked.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.connection.Connection.autocommit">
+<em class="property">property </em><code class="sig-name descname">autocommit</code><a class="headerlink" href="#google.cloud.spanner_dbapi.connection.Connection.autocommit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Autocommit mode flag for this connection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#bool" title="(in Python v3.7)">bool</a></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Autocommit mode flag value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.connection.Connection.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/connection.html#Connection.close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.connection.Connection.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Closes this connection.</p>
+<p>The connection will be unusable from this point forward. If the
+connection has an active transaction, it will be rolled back.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.connection.Connection.commit">
+<code class="sig-name descname">commit</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/connection.html#Connection.commit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.connection.Connection.commit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Commits any pending transaction to the database.</p>
+<p>This method is non-operational in autocommit mode.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.connection.Connection.cursor">
+<code class="sig-name descname">cursor</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/connection.html#Connection.cursor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.connection.Connection.cursor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Factory to create a DB-API Cursor.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.connection.Connection.database">
+<em class="property">property </em><code class="sig-name descname">database</code><a class="headerlink" href="#google.cloud.spanner_dbapi.connection.Connection.database" title="Permalink to this definition">¶</a></dt>
+<dd><p>Database to which this connection relates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Database</span></code></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The related database object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.connection.Connection.instance">
+<em class="property">property </em><code class="sig-name descname">instance</code><a class="headerlink" href="#google.cloud.spanner_dbapi.connection.Connection.instance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Instance to which this connection relates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Instance</span></code></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The related instance object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.connection.Connection.rollback">
+<code class="sig-name descname">rollback</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/connection.html#Connection.rollback"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.connection.Connection.rollback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rolls back any pending transaction.</p>
+<p>This is a no-op if there is no active transaction or if the connection
+is in autocommit mode.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.connection.Connection.transaction_checkout">
+<code class="sig-name descname">transaction_checkout</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/connection.html#Connection.transaction_checkout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.connection.Connection.transaction_checkout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a Cloud Spanner transaction.</p>
+<p>Begin a new transaction, if there is no transaction in
+this connection yet. Return the begun one otherwise.</p>
+<p>The method is non operational in autocommit mode.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_v1.transaction.Transaction</span></code></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A Cloud Spanner transaction object, ready to use.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.connection.connect">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.connection.</code><code class="sig-name descname">connect</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">instance_id</span></em>, <em class="sig-param"><span class="n">database_id</span></em>, <em class="sig-param"><span class="n">project</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">credentials</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">pool</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">user_agent</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/connection.html#connect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.connection.connect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a connection to a Google Cloud Spanner database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>instance_id</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – The ID of the instance to connect to.</p></li>
+<li><p><strong>database_id</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – The ID of the database to connect to.</p></li>
+<li><p><strong>project</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – (Optional) The ID of the project which owns the
+instances, tables and data. If not provided, will
+attempt to determine from the environment.</p></li>
+<li><p><strong>credentials</strong> (<a class="reference external" href="https://google-auth.readthedocs.io/en/stable/reference/google.auth.credentials.html#google.auth.credentials.Credentials" title="(in google-auth v1.18.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Credentials</span></code></a>) – (Optional) The authorization credentials to attach to
+requests. These credentials identify this application
+to the service. If none are specified, the client will
+attempt to ascertain the credentials from the
+environment.</p></li>
+<li><p><strong>pool</strong> (Concrete subclass of
+<code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractSessionPool</span></code>.) – (Optional). Session pool to be used by database.</p></li>
+<li><p><strong>user_agent</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – (Optional) User agent to be used with this connection’s
+requests.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#google.cloud.spanner_dbapi.connection.Connection" title="google.cloud.spanner_dbapi.connection.Connection"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.connection.Connection</span></code></a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Connection object associated with the given Google Cloud Spanner
+resource.</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/exceptions.html#ValueError" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code></a> in case of given instance/database
+doesn’t exist.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-google.cloud.spanner_dbapi.cursor">
+<span id="spanner-dbapi-cursor-module"></span><h2>spanner_dbapi.cursor module<a class="headerlink" href="#module-google.cloud.spanner_dbapi.cursor" title="Permalink to this headline">¶</a></h2>
+<p>Database cursor for Google Cloud Spanner DB-API.</p>
+<dl class="py attribute">
+<dt id="google.cloud.spanner_dbapi.cursor.ColumnDetails">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.cursor.</code><code class="sig-name descname">ColumnDetails</code><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.ColumnDetails" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.cursor.column_details</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor">
+<em class="property">class </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.cursor.</code><code class="sig-name descname">Cursor</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">connection</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Database cursor to manage the context of a fetch operation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>connection</strong> (<a class="reference internal" href="#google.cloud.spanner_dbapi.connection.Connection" title="google.cloud.spanner_dbapi.connection.Connection"><code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code></a>) – A DB-API connection to Google Cloud Spanner.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.callproc">
+<code class="sig-name descname">callproc</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">procname</span></em>, <em class="sig-param"><span class="n">args</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.callproc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.callproc" title="Permalink to this definition">¶</a></dt>
+<dd><p>A no-op, raising an error if the cursor or connection is closed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Closes this Cursor, making it unusable from this point forward.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.description">
+<em class="property">property </em><code class="sig-name descname">description</code><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.description" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read-only attribute containing a sequence of the following items:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">type_code</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">display_size</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">internal_size</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">precision</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scale</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">null_ok</span></code></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#tuple" title="(in Python v3.7)">tuple</a></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A tuple of columns’ information.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.execute">
+<code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sql</span></em>, <em class="sig-param"><span class="n">args</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.execute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepares and executes a Spanner database operation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sql</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – A SQL query statement.</p></li>
+<li><p><strong>args</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – Additional parameters to supplement the SQL query.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.executemany">
+<code class="sig-name descname">executemany</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">operation</span></em>, <em class="sig-param"><span class="n">seq_of_params</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.executemany"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.executemany" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute the given SQL with every parameters set
+from the given sequence of parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>operation</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – SQL code to execute.</p></li>
+<li><p><strong>seq_of_params</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – Sequence of additional parameters to run
+the query with.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.fetchall">
+<code class="sig-name descname">fetchall</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.fetchall"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.fetchall" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetch all (remaining) rows of a query result, returning them as
+a sequence of sequences.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.fetchmany">
+<code class="sig-name descname">fetchmany</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">size</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.fetchmany"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.fetchmany" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetch the next set of rows of a query result, returning a sequence
+of sequences. An empty sequence is returned when no more rows are available.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>size</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – (Optional) The maximum number of results to fetch.</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.InterfaceError" title="google.cloud.spanner_dbapi.exceptions.InterfaceError"><strong>InterfaceError</strong></a> – if the previous call to .execute*() did not produce any result set
+or if no call was issued yet.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.fetchone">
+<code class="sig-name descname">fetchone</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.fetchone"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.fetchone" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetch the next row of a query result set, returning a single
+sequence, or None when no more data is available.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.get_table_column_schema">
+<code class="sig-name descname">get_table_column_schema</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">table_name</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.get_table_column_schema"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.get_table_column_schema" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.is_closed">
+<em class="property">property </em><code class="sig-name descname">is_closed</code><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.is_closed" title="Permalink to this definition">¶</a></dt>
+<dd><p>The cursor close indicator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#bool" title="(in Python v3.7)">bool</a></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>True if the cursor or the parent connection is closed,
+otherwise False.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.list_tables">
+<code class="sig-name descname">list_tables</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.list_tables"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.list_tables" title="Permalink to this definition">¶</a></dt>
+<dd><p>List the tables of the linked Database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#list" title="(in Python v3.7)">list</a></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The list of tables within the Database.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.nextset">
+<code class="sig-name descname">nextset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.nextset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.nextset" title="Permalink to this definition">¶</a></dt>
+<dd><p>A no-op, raising an error if the cursor or connection is closed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.rowcount">
+<em class="property">property </em><code class="sig-name descname">rowcount</code><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.rowcount" title="Permalink to this definition">¶</a></dt>
+<dd><p>The number of rows produced by the last <cite>.execute()</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#int" title="(in Python v3.7)">int</a></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The number of rows produced by the last .execute*().</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.run_sql_in_snapshot">
+<code class="sig-name descname">run_sql_in_snapshot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sql</span></em>, <em class="sig-param"><span class="n">params</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">param_types</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.run_sql_in_snapshot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.run_sql_in_snapshot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.setinputsizes">
+<code class="sig-name descname">setinputsizes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sizes</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.setinputsizes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.setinputsizes" title="Permalink to this definition">¶</a></dt>
+<dd><p>A no-op, raising an error if the cursor or connection is closed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.cursor.Cursor.setoutputsize">
+<code class="sig-name descname">setoutputsize</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">size</span></em>, <em class="sig-param"><span class="n">column</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.setoutputsize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.cursor.Cursor.setoutputsize" title="Permalink to this definition">¶</a></dt>
+<dd><p>A no-op, raising an error if the cursor or connection is closed.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-google.cloud.spanner_dbapi.exceptions">
+<span id="spanner-dbapi-exceptions-module"></span><h2>spanner_dbapi.exceptions module<a class="headerlink" href="#module-google.cloud.spanner_dbapi.exceptions" title="Permalink to this headline">¶</a></h2>
+<p>Spanner DB API exceptions.</p>
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.exceptions.DataError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.exceptions.</code><code class="sig-name descname">DataError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#DataError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.exceptions.DataError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.DatabaseError" title="google.cloud.spanner_dbapi.exceptions.DatabaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.DatabaseError</span></code></a></p>
+<p>Error due to problems with the processed data like
+division by zero, numeric value out of range, etc.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.exceptions.DatabaseError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.exceptions.</code><code class="sig-name descname">DatabaseError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#DatabaseError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.exceptions.DatabaseError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.Error" title="google.cloud.spanner_dbapi.exceptions.Error"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.Error</span></code></a></p>
+<p>Error related to the database.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.exceptions.Error">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.exceptions.</code><code class="sig-name descname">Error</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#Error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.exceptions.Error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://python.readthedocs.io/en/latest/library/exceptions.html#Exception" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>The base class for all the DB API exceptions.</p>
+<p>Does not include <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.Warning" title="google.cloud.spanner_dbapi.exceptions.Warning"><code class="xref py py-class docutils literal notranslate"><span class="pre">Warning</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.exceptions.IntegrityError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.exceptions.</code><code class="sig-name descname">IntegrityError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#IntegrityError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.exceptions.IntegrityError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.DatabaseError" title="google.cloud.spanner_dbapi.exceptions.DatabaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.DatabaseError</span></code></a></p>
+<p>Error for cases of relational integrity of the database
+is affected, e.g. a foreign key check fails.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.exceptions.InterfaceError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.exceptions.</code><code class="sig-name descname">InterfaceError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#InterfaceError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.exceptions.InterfaceError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.Error" title="google.cloud.spanner_dbapi.exceptions.Error"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.Error</span></code></a></p>
+<p>Error related to the database interface
+rather than the database itself.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.exceptions.InternalError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.exceptions.</code><code class="sig-name descname">InternalError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#InternalError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.exceptions.InternalError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.DatabaseError" title="google.cloud.spanner_dbapi.exceptions.DatabaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.DatabaseError</span></code></a></p>
+<p>Internal database error, e.g. the cursor is not valid
+anymore, the transaction is out of sync, etc.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.exceptions.NotSupportedError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.exceptions.</code><code class="sig-name descname">NotSupportedError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#NotSupportedError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.exceptions.NotSupportedError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.DatabaseError" title="google.cloud.spanner_dbapi.exceptions.DatabaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.DatabaseError</span></code></a></p>
+<p>Error for case of a method or database API not
+supported by the database was used.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.exceptions.OperationalError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.exceptions.</code><code class="sig-name descname">OperationalError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#OperationalError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.exceptions.OperationalError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.DatabaseError" title="google.cloud.spanner_dbapi.exceptions.DatabaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.DatabaseError</span></code></a></p>
+<p>Error related to the database’s operation, e.g. an
+unexpected disconnect, the data source name is not
+found, a transaction could not be processed, a
+memory allocation error, etc.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.exceptions.ProgrammingError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.exceptions.</code><code class="sig-name descname">ProgrammingError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#ProgrammingError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.exceptions.ProgrammingError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.DatabaseError" title="google.cloud.spanner_dbapi.exceptions.DatabaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.DatabaseError</span></code></a></p>
+<p>Programming error, e.g. table not found or already
+exists, syntax error in the SQL statement, wrong
+number of parameters specified, etc.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.exceptions.Warning">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.exceptions.</code><code class="sig-name descname">Warning</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#Warning"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.exceptions.Warning" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://python.readthedocs.io/en/latest/library/exceptions.html#Exception" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>Important DB API warning.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-google.cloud.spanner_dbapi.parse_utils">
+<span id="spanner-dbapi-parse-utils-module"></span><h2>spanner_dbapi.parse_utils module<a class="headerlink" href="#module-google.cloud.spanner_dbapi.parse_utils" title="Permalink to this headline">¶</a></h2>
+<p>SQL parsing and classification utils.</p>
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.parse_utils.cast_for_spanner">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.parse_utils.</code><code class="sig-name descname">cast_for_spanner</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parse_utils.html#cast_for_spanner"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parse_utils.cast_for_spanner" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert the param to its Cloud Spanner equivalent type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>Any</em>) – The value to convert to a Cloud Spanner type.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>Any</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The value converted to a Cloud Spanner type.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.parse_utils.classify_stmt">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.parse_utils.</code><code class="sig-name descname">classify_stmt</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">query</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parse_utils.html#classify_stmt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parse_utils.classify_stmt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine SQL query type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>query</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – A SQL query.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)">str</a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The query type name.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.parse_utils.ensure_where_clause">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.parse_utils.</code><code class="sig-name descname">ensure_where_clause</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sql</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parse_utils.html#ensure_where_clause"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parse_utils.ensure_where_clause" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cloud Spanner requires a WHERE clause on UPDATE and DELETE statements.
+Add a dummy WHERE clause if necessary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>sql</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – A SQL request.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)">str</a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A SQL request with dummy WHERE clause if necessary.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.parse_utils.escape_name">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.parse_utils.</code><code class="sig-name descname">escape_name</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parse_utils.html#escape_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parse_utils.escape_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply backticks to the name that either contain ‘-‘ or
+‘ ‘, or is a Cloud Spanner’s reserved keyword.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>name</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – The name to escape.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The name escaped if it has to be escaped.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.parse_utils.get_param_types">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.parse_utils.</code><code class="sig-name descname">get_param_types</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">params</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parse_utils.html#get_param_types"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parse_utils.get_param_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine Cloud Spanner types for the given parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>params</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#dict" title="(in Python v3.7)"><em>dict</em></a>) – Parameters requiring to find Cloud Spanner types.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#dict" title="(in Python v3.7)">dict</a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The types index for the given parameters.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.parse_utils.parse_insert">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.parse_utils.</code><code class="sig-name descname">parse_insert</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">insert_sql</span></em>, <em class="sig-param"><span class="n">params</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parse_utils.html#parse_insert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parse_utils.parse_insert" title="Permalink to this definition">¶</a></dt>
+<dd><dl>
+<dt>Parse an INSERT statement an generate a list of tuples of the form:</dt><dd><dl class="simple">
+<dt>[</dt><dd><p>(SQL, params_per_row1),
+(SQL, params_per_row2),
+(SQL, params_per_row3),
+…</p>
+</dd>
+</dl>
+<p>]</p>
+</dd>
+</dl>
+<p>There are 4 variants of an INSERT statement:
+a) INSERT INTO &lt;table&gt; (columns…) VALUES (&lt;inlined values&gt;): no params
+b) INSERT INTO &lt;table&gt; (columns…) SELECT_STMT:               no params
+c) INSERT INTO &lt;table&gt; (columns…) VALUES (%s,…):           with params
+d) INSERT INTO &lt;table&gt; (columns…) VALUES (%s,..&lt;EXPR&gt;…)    with params and expressions</p>
+<p>Thus given each of the forms, it will produce a dictionary describing
+how to upload the contents to Cloud Spanner:
+Case a)</p>
+<blockquote>
+<div><blockquote>
+<div><p>SQL: INSERT INTO T (f1, f2) VALUES (1, 2)</p>
+</div></blockquote>
+<dl>
+<dt>it produces:</dt><dd><dl>
+<dt>{</dt><dd><dl class="simple">
+<dt>‘sql_params_list’: [</dt><dd><p>(‘INSERT INTO T (f1, f2) VALUES (1, 2)’, None),</p>
+</dd>
+</dl>
+<p>],</p>
+</dd>
+</dl>
+<p>}</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl>
+<dt>Case b)</dt><dd><blockquote>
+<div><p>SQL: ‘INSERT INTO T (s, c) SELECT st, zc FROM cus ORDER BY fn, ln’,</p>
+</div></blockquote>
+<dl>
+<dt>it produces:</dt><dd><dl>
+<dt>{</dt><dd><dl class="simple">
+<dt>‘sql_params_list’: [</dt><dd><p>(‘INSERT INTO T (s, c) SELECT st, zc FROM cus ORDER BY fn, ln’, None),</p>
+</dd>
+</dl>
+<p>]</p>
+</dd>
+</dl>
+<p>}</p>
+</dd>
+</dl>
+</dd>
+<dt>Case c)</dt><dd><blockquote>
+<div><p>SQL: INSERT INTO T (f1, f2) VALUES (%s, %s), (%s, %s)
+Params: [‘a’, ‘b’, ‘c’, ‘d’]</p>
+</div></blockquote>
+<dl>
+<dt>it produces:</dt><dd><dl class="simple">
+<dt>{</dt><dd><p>‘homogenous’: True,
+‘table’: ‘T’,
+‘columns’: [‘f1’, ‘f2’],
+‘values’: [(‘a’, ‘b’,), (‘c’, ‘d’,)],</p>
+</dd>
+</dl>
+<p>}</p>
+</dd>
+</dl>
+</dd>
+<dt>Case d)</dt><dd><blockquote>
+<div><p>SQL: INSERT INTO T (f1, f2) VALUES (%s, LOWER(%s)), (UPPER(%s), %s)
+Params: [‘a’, ‘b’, ‘c’, ‘d’]</p>
+</div></blockquote>
+<dl>
+<dt>it produces:</dt><dd><dl>
+<dt>{</dt><dd><dl class="simple">
+<dt>‘sql_params_list’: [</dt><dd><p>(‘INSERT INTO T (f1, f2) VALUES (%s, LOWER(%s))’, (‘a’, ‘b’,))
+(‘INSERT INTO T (f1, f2) VALUES (UPPER(%s), %s)’, (‘c’, ‘d’,))</p>
+</dd>
+</dl>
+<p>],</p>
+</dd>
+</dl>
+<p>}</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>insert_sql</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – A SQL insert request.</p></li>
+<li><p><strong>params</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – A list of parameters.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#dict" title="(in Python v3.7)">dict</a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A dictionary that maps <cite>sql_params_list</cite> to the list of
+parameters in cases a), b), d) or the dictionary with
+information about the resulting table in case c).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.parse_utils.rows_for_insert_or_update">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.parse_utils.</code><code class="sig-name descname">rows_for_insert_or_update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">columns</span></em>, <em class="sig-param"><span class="n">params</span></em>, <em class="sig-param"><span class="n">pyformat_args</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parse_utils.html#rows_for_insert_or_update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parse_utils.rows_for_insert_or_update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a tupled list of params to be used as a single value per
+value that inserted from a statement such as</p>
+<blockquote>
+<div><p>SQL:        ‘INSERT INTO t (f1, f2, f3) VALUES (%s, %s, %s), (%s, %s, %s), (%s, %s, %s)’
+Params A:   [(1, 2, 3), (4, 5, 6), (7, 8, 9)]
+Params B:   [1, 2, 3, 4, 5, 6, 7, 8, 9]</p>
+</div></blockquote>
+<dl class="simple">
+<dt>We’ll have to convert both params types into:</dt><dd><p>Params: [(1, 2, 3,), (4, 5, 6,), (7, 8, 9,)]</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>columns</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – A list of the columns of the table.</p></li>
+<li><p><strong>params</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – A list of parameters.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#list" title="(in Python v3.7)">list</a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A properly restructured list of the parameters.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.parse_utils.sql_pyformat_args_to_spanner">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.parse_utils.</code><code class="sig-name descname">sql_pyformat_args_to_spanner</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sql</span></em>, <em class="sig-param"><span class="n">params</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parse_utils.html#sql_pyformat_args_to_spanner"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parse_utils.sql_pyformat_args_to_spanner" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform pyformat set SQL to named arguments for Cloud Spanner.
+It will also unescape previously escaped format specifiers
+like %%s to %s.
+For example:</p>
+<blockquote>
+<div><p>SQL:      ‘SELECT * from t where f1=%s, f2=%s, f3=%s’
+Params:   (‘a’, 23, ‘888***’)</p>
+</div></blockquote>
+<dl class="simple">
+<dt>becomes:</dt><dd><p>SQL:      ‘SELECT * from t where <a class="reference external" href="mailto:f1=&#37;&#52;&#48;a0">f1=<span>&#64;</span>a0</a>, <a class="reference external" href="mailto:f2=&#37;&#52;&#48;a1">f2=<span>&#64;</span>a1</a>, <a class="reference external" href="mailto:f3=&#37;&#52;&#48;a2">f3=<span>&#64;</span>a2</a>’
+Params:   {‘a0’: ‘a’, ‘a1’: 23, ‘a2’: ‘888***’}</p>
+</dd>
+<dt>OR</dt><dd><p>SQL:      ‘SELECT * from t where f1=%(f1)s, f2=%(f2)s, f3=%(f3)s’
+Params:   {‘f1’: ‘a’, ‘f2’: 23, ‘f3’: ‘888***’, ‘extra’: ‘aye’)</p>
+</dd>
+<dt>becomes:</dt><dd><p>SQL:      ‘SELECT * from t where <a class="reference external" href="mailto:f1=&#37;&#52;&#48;a0">f1=<span>&#64;</span>a0</a>, <a class="reference external" href="mailto:f2=&#37;&#52;&#48;a1">f2=<span>&#64;</span>a1</a>, <a class="reference external" href="mailto:f3=&#37;&#52;&#48;a2">f3=<span>&#64;</span>a2</a>’
+Params:   {‘a0’: ‘a’, ‘a1’: 23, ‘a2’: ‘888***’}</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sql</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – A SQL request.</p></li>
+<li><p><strong>params</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – A list of parameters.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#tuple" title="(in Python v3.7)">tuple</a>(<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)">str</a>, <a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#dict" title="(in Python v3.7)">dict</a>)</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A tuple of the sanitized SQL and a dictionary of the named arguments.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-google.cloud.spanner_dbapi.parser">
+<span id="spanner-dbapi-parser-module"></span><h2>spanner_dbapi.parser module<a class="headerlink" href="#module-google.cloud.spanner_dbapi.parser" title="Permalink to this headline">¶</a></h2>
+<dl>
+<dt>Grammar for parsing VALUES:</dt><dd><p>VALUES      := <cite>VALUES(</cite> + ARGS + <cite>)</cite>
+ARGS        := [EXPR,]*EXPR
+EXPR        := TERMINAL / FUNC
+TERMINAL    := <cite>%s</cite>
+FUNC        := alphanum + <cite>(</cite> + ARGS + <cite>)</cite>
+alphanum    := (<a href="#id13"><span class="problematic" id="id14">a-zA-Z_</span></a>)[<a href="#id15"><span class="problematic" id="id16">0-9a-ZA-Z_</span></a>]*</p>
+</dd>
+<dt>thus given:</dt><dd><p>statement: ‘VALUES (%s, %s), (%s, LOWER(UPPER(%s)))   , (%s)’
+It’ll parse:</p>
+<blockquote>
+<div><dl>
+<dt>VALUES</dt><dd><dl>
+<dt><a href="#id1"><span class="problematic" id="id2">|</span></a>- ARGS</dt><dd><p><a href="#id3"><span class="problematic" id="id4">|</span></a>- (TERMINAL, TERMINAL)
+<a href="#id5"><span class="problematic" id="id6">|</span></a>- (TERMINAL, FUNC</p>
+<blockquote>
+<div><dl class="simple">
+<dt><a href="#id7"><span class="problematic" id="id8">|</span></a>- FUNC</dt><dd><p><a href="#id9"><span class="problematic" id="id10">|</span></a>- (TERMINAL)</p>
+</dd>
+</dl>
+</div></blockquote>
+<p><a href="#id11"><span class="problematic" id="id12">|</span></a>- (TERMINAL)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</div></blockquote>
+</dd>
+</dl>
+<dl class="py class">
+<dt id="google.cloud.spanner_dbapi.parser.a_args">
+<em class="property">class </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.parser.</code><code class="sig-name descname">a_args</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argv</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parser.html#a_args"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parser.a_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Expression arguments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>argv</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – A List of expression arguments.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.parser.a_args.has_expr">
+<code class="sig-name descname">has_expr</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parser.html#a_args.has_expr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parser.a_args.has_expr" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.parser.a_args.homogenous">
+<code class="sig-name descname">homogenous</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parser.html#a_args.homogenous"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parser.a_args.homogenous" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check arguments of the expression to be homogeneous.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#bool" title="(in Python v3.7)">bool</a></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>True if all the arguments of the expression are in pyformat
+and each has the same length, False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.parser.as_values">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.parser.</code><code class="sig-name descname">as_values</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">values_stmt</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parser.html#as_values"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parser.as_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the parsed values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>values_stmt</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Raw values.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>Any</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A tree of the already parsed expression.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.parser.expect">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.parser.</code><code class="sig-name descname">expect</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">word</span></em>, <em class="sig-param"><span class="n">token</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parser.html#expect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parser.expect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse the given expression recursively.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>word</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – A string expression.</p></li>
+<li><p><strong>token</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – An expression token.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>(<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)">str</a>, Any)</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A tuple containing the rest of the expression string and the tree
+of the already parsed.</p>
+</dd>
+</dl>
+<p>:raises <code class="xref py py-class docutils literal notranslate"><span class="pre">ProgrammingError</span></code>: If there is a parsing error.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="google.cloud.spanner_dbapi.parser.func">
+<em class="property">class </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.parser.</code><code class="sig-name descname">func</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func_name</span></em>, <em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parser.html#func"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parser.func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.parser.parse_values">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.parser.</code><code class="sig-name descname">parse_values</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">stmt</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parser.html#parse_values"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parser.parse_values" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="google.cloud.spanner_dbapi.parser.terminal">
+<em class="property">class </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.parser.</code><code class="sig-name descname">terminal</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parser.html#terminal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parser.terminal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></p>
+<p>Represent the unit symbol that can be part of a SQL values clause.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="google.cloud.spanner_dbapi.parser.values">
+<em class="property">class </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.parser.</code><code class="sig-name descname">values</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argv</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parser.html#values"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.parser.values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.parser.a_args" title="google.cloud.spanner_dbapi.parser.a_args"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.parser.a_args</span></code></a></p>
+<p>A wrapper for values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)">str</a></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A string of the values expression in a tree view.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-google.cloud.spanner_dbapi.types">
+<span id="spanner-dbapi-types-module"></span><h2>spanner_dbapi.types module<a class="headerlink" href="#module-google.cloud.spanner_dbapi.types" title="Permalink to this headline">¶</a></h2>
+<p>Implementation of the type objects and constructors according to the
+PEP-0249 specification.</p>
+<p>See
+<a class="reference external" href="https://www.python.org/dev/peps/pep-0249/#type-objects-and-constructors">https://www.python.org/dev/peps/pep-0249/#type-objects-and-constructors</a></p>
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.types.DateFromTicks">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.types.</code><code class="sig-name descname">DateFromTicks</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ticks</span></em><span class="sig-paren">)</span><a class="headerlink" href="#google.cloud.spanner_dbapi.types.DateFromTicks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Based on PEP-249 Implementation Hints for Module Authors:</p>
+<p><a class="reference external" href="https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors">https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors</a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="google.cloud.spanner_dbapi.types.DateStr">
+<em class="property">class </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.types.</code><code class="sig-name descname">DateStr</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/types.html#DateStr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.types.DateStr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></p>
+<p>[inherited from the alpha release]</p>
+<p>TODO: Decide whether this class is necessary</p>
+<p>DateStr is a sentinel type to help format Django dates as
+compatible with Cloud Spanner’s DATE type, but right before making
+queries, it’ll help differentiate between normal strings and the case of
+types that should be DATE.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.types.TimeFromTicks">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.types.</code><code class="sig-name descname">TimeFromTicks</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ticks</span></em><span class="sig-paren">)</span><a class="headerlink" href="#google.cloud.spanner_dbapi.types.TimeFromTicks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Based on PEP-249 Implementation Hints for Module Authors:</p>
+<p><a class="reference external" href="https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors">https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors</a></p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.types.TimestampFromTicks">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.types.</code><code class="sig-name descname">TimestampFromTicks</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ticks</span></em><span class="sig-paren">)</span><a class="headerlink" href="#google.cloud.spanner_dbapi.types.TimestampFromTicks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Based on PEP-249 Implementation Hints for Module Authors:</p>
+<p><a class="reference external" href="https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors">https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors</a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="google.cloud.spanner_dbapi.types.TimestampStr">
+<em class="property">class </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.types.</code><code class="sig-name descname">TimestampStr</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/types.html#TimestampStr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.types.TimestampStr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></p>
+<p>[inherited from the alpha release]</p>
+<p>TODO: Decide whether this class is necessary</p>
+<p>TimestampStr exists so that we can purposefully format types as timestamps
+compatible with Cloud Spanner’s TIMESTAMP type, but right before making
+queries, it’ll help differentiate between normal strings and the case of
+types that should be TIMESTAMP.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-google.cloud.spanner_dbapi.utils">
+<span id="spanner-dbapi-utils-module"></span><h2>spanner_dbapi.utils module<a class="headerlink" href="#module-google.cloud.spanner_dbapi.utils" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="google.cloud.spanner_dbapi.utils.PeekIterator">
+<em class="property">class </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.utils.</code><code class="sig-name descname">PeekIterator</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/utils.html#PeekIterator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.utils.PeekIterator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Peek at the first element out of an iterator for the sake of operations
+like auto-population of fields on reading the first element.
+If next’s result is an instance of list, it’ll be converted into a tuple
+to conform with DBAPI v2’s sequence expectations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>source</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – A list of source for the Iterator.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.utils.backtick_unicode">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.utils.</code><code class="sig-name descname">backtick_unicode</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sql</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/utils.html#backtick_unicode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.utils.backtick_unicode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check the SQL to be valid and split it by segments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>sql</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – A SQL request.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)">str</a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A SQL parsed by segments in unicode if initial
+SQL is valid, initial string otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.utils.sanitize_literals_for_upload">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.utils.</code><code class="sig-name descname">sanitize_literals_for_upload</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">s</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/utils.html#sanitize_literals_for_upload"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.utils.sanitize_literals_for_upload" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert literals in s, to be fit for consumption by Cloud Spanner.</p>
+<ul class="simple">
+<li><p>Convert %% (escaped percent literals) to %. Percent signs must be escaped
+when values like %s are used as SQL parameter placeholders but Spanner’s query
+language uses placeholders like &#64;a0 and doesn’t expect percent signs to be
+escaped.</p></li>
+<li><p>Quote words containing non-ASCII, with backticks, for example föö to <cite>föö</cite>.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>s</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – A string with literals to be fitted for the consumption.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)">str</a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A sanitized string for uploading.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-google.cloud.spanner_dbapi.version">
+<span id="spanner-dbapi-version-module"></span><h2>spanner_dbapi.version module<a class="headerlink" href="#module-google.cloud.spanner_dbapi.version" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-google.cloud.spanner_dbapi">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-google.cloud.spanner_dbapi" title="Permalink to this headline">¶</a></h2>
+<p>Connection-based DB API for Cloud Spanner.</p>
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.Binary">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">Binary</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">s</span></em>, <em class="sig-param"><span class="n">altchars</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#google.cloud.spanner_dbapi.Binary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encode the bytes-like object s using Base64 and return a bytes object.</p>
+<p>Optional altchars should be a byte string of length 2 which specifies an
+alternative alphabet for the ‘+’ and ‘/’ characters.  This allows an
+application to e.g. generate url or filesystem safe Base64 strings.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="google.cloud.spanner_dbapi.Connection">
+<em class="property">class </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">Connection</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">instance</span></em>, <em class="sig-param"><span class="n">database</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/connection.html#Connection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Connection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Representation of a DB-API connection to a Cloud Spanner database.</p>
+<p>You most likely don’t need to instantiate <cite>Connection</cite> objects
+directly, use the <cite>connect</cite> module function instead.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>instance</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Instance</span></code>) – Cloud Spanner instance to connect to.</p></li>
+<li><p><strong>database</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Database</span></code>) – The database to which the connection is linked.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Connection.autocommit">
+<em class="property">property </em><code class="sig-name descname">autocommit</code><a class="headerlink" href="#google.cloud.spanner_dbapi.Connection.autocommit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Autocommit mode flag for this connection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#bool" title="(in Python v3.7)">bool</a></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Autocommit mode flag value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Connection.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/connection.html#Connection.close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Connection.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Closes this connection.</p>
+<p>The connection will be unusable from this point forward. If the
+connection has an active transaction, it will be rolled back.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Connection.commit">
+<code class="sig-name descname">commit</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/connection.html#Connection.commit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Connection.commit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Commits any pending transaction to the database.</p>
+<p>This method is non-operational in autocommit mode.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Connection.cursor">
+<code class="sig-name descname">cursor</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/connection.html#Connection.cursor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Connection.cursor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Factory to create a DB-API Cursor.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Connection.database">
+<em class="property">property </em><code class="sig-name descname">database</code><a class="headerlink" href="#google.cloud.spanner_dbapi.Connection.database" title="Permalink to this definition">¶</a></dt>
+<dd><p>Database to which this connection relates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Database</span></code></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The related database object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Connection.instance">
+<em class="property">property </em><code class="sig-name descname">instance</code><a class="headerlink" href="#google.cloud.spanner_dbapi.Connection.instance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Instance to which this connection relates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Instance</span></code></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The related instance object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Connection.rollback">
+<code class="sig-name descname">rollback</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/connection.html#Connection.rollback"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Connection.rollback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rolls back any pending transaction.</p>
+<p>This is a no-op if there is no active transaction or if the connection
+is in autocommit mode.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Connection.run_prior_DDL_statements">
+<code class="sig-name descname">run_prior_DDL_statements</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/connection.html#Connection.run_prior_DDL_statements"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Connection.run_prior_DDL_statements" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Connection.transaction_checkout">
+<code class="sig-name descname">transaction_checkout</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/connection.html#Connection.transaction_checkout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Connection.transaction_checkout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a Cloud Spanner transaction.</p>
+<p>Begin a new transaction, if there is no transaction in
+this connection yet. Return the begun one otherwise.</p>
+<p>The method is non operational in autocommit mode.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_v1.transaction.Transaction</span></code></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A Cloud Spanner transaction object, ready to use.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="google.cloud.spanner_dbapi.Cursor">
+<em class="property">class </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">Cursor</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">connection</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Database cursor to manage the context of a fetch operation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>connection</strong> (<a class="reference internal" href="#google.cloud.spanner_dbapi.connection.Connection" title="google.cloud.spanner_dbapi.connection.Connection"><code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code></a>) – A DB-API connection to Google Cloud Spanner.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.callproc">
+<code class="sig-name descname">callproc</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">procname</span></em>, <em class="sig-param"><span class="n">args</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.callproc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.callproc" title="Permalink to this definition">¶</a></dt>
+<dd><p>A no-op, raising an error if the cursor or connection is closed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Closes this Cursor, making it unusable from this point forward.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.description">
+<em class="property">property </em><code class="sig-name descname">description</code><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.description" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read-only attribute containing a sequence of the following items:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">type_code</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">display_size</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">internal_size</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">precision</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scale</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">null_ok</span></code></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#tuple" title="(in Python v3.7)">tuple</a></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A tuple of columns’ information.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.execute">
+<code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sql</span></em>, <em class="sig-param"><span class="n">args</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.execute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepares and executes a Spanner database operation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sql</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – A SQL query statement.</p></li>
+<li><p><strong>args</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – Additional parameters to supplement the SQL query.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.executemany">
+<code class="sig-name descname">executemany</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">operation</span></em>, <em class="sig-param"><span class="n">seq_of_params</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.executemany"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.executemany" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute the given SQL with every parameters set
+from the given sequence of parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>operation</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – SQL code to execute.</p></li>
+<li><p><strong>seq_of_params</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – Sequence of additional parameters to run
+the query with.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.fetchall">
+<code class="sig-name descname">fetchall</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.fetchall"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.fetchall" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetch all (remaining) rows of a query result, returning them as
+a sequence of sequences.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.fetchmany">
+<code class="sig-name descname">fetchmany</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">size</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.fetchmany"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.fetchmany" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetch the next set of rows of a query result, returning a sequence
+of sequences. An empty sequence is returned when no more rows are available.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>size</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – (Optional) The maximum number of results to fetch.</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.InterfaceError" title="google.cloud.spanner_dbapi.exceptions.InterfaceError"><strong>InterfaceError</strong></a> – if the previous call to .execute*() did not produce any result set
+or if no call was issued yet.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.fetchone">
+<code class="sig-name descname">fetchone</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.fetchone"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.fetchone" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetch the next row of a query result set, returning a single
+sequence, or None when no more data is available.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.get_table_column_schema">
+<code class="sig-name descname">get_table_column_schema</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">table_name</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.get_table_column_schema"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.get_table_column_schema" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.is_closed">
+<em class="property">property </em><code class="sig-name descname">is_closed</code><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.is_closed" title="Permalink to this definition">¶</a></dt>
+<dd><p>The cursor close indicator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#bool" title="(in Python v3.7)">bool</a></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>True if the cursor or the parent connection is closed,
+otherwise False.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.list_tables">
+<code class="sig-name descname">list_tables</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.list_tables"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.list_tables" title="Permalink to this definition">¶</a></dt>
+<dd><p>List the tables of the linked Database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#list" title="(in Python v3.7)">list</a></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The list of tables within the Database.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.nextset">
+<code class="sig-name descname">nextset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.nextset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.nextset" title="Permalink to this definition">¶</a></dt>
+<dd><p>A no-op, raising an error if the cursor or connection is closed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.rowcount">
+<em class="property">property </em><code class="sig-name descname">rowcount</code><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.rowcount" title="Permalink to this definition">¶</a></dt>
+<dd><p>The number of rows produced by the last <cite>.execute()</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/functions.html#int" title="(in Python v3.7)">int</a></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The number of rows produced by the last .execute*().</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.run_sql_in_snapshot">
+<code class="sig-name descname">run_sql_in_snapshot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sql</span></em>, <em class="sig-param"><span class="n">params</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">param_types</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.run_sql_in_snapshot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.run_sql_in_snapshot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.setinputsizes">
+<code class="sig-name descname">setinputsizes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sizes</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.setinputsizes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.setinputsizes" title="Permalink to this definition">¶</a></dt>
+<dd><p>A no-op, raising an error if the cursor or connection is closed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="google.cloud.spanner_dbapi.Cursor.setoutputsize">
+<code class="sig-name descname">setoutputsize</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">size</span></em>, <em class="sig-param"><span class="n">column</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/cursor.html#Cursor.setoutputsize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Cursor.setoutputsize" title="Permalink to this definition">¶</a></dt>
+<dd><p>A no-op, raising an error if the cursor or connection is closed.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.DataError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">DataError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#DataError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.DataError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.DatabaseError" title="google.cloud.spanner_dbapi.exceptions.DatabaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.DatabaseError</span></code></a></p>
+<p>Error due to problems with the processed data like
+division by zero, numeric value out of range, etc.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.DatabaseError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">DatabaseError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#DatabaseError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.DatabaseError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.Error" title="google.cloud.spanner_dbapi.exceptions.Error"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.Error</span></code></a></p>
+<p>Error related to the database.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="google.cloud.spanner_dbapi.Date">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">Date</code><a class="headerlink" href="#google.cloud.spanner_dbapi.Date" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference external" href="https://python.readthedocs.io/en/latest/library/datetime.html#datetime.date" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">datetime.date</span></code></a></p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.DateFromTicks">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">DateFromTicks</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ticks</span></em><span class="sig-paren">)</span><a class="headerlink" href="#google.cloud.spanner_dbapi.DateFromTicks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Based on PEP-249 Implementation Hints for Module Authors:</p>
+<p><a class="reference external" href="https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors">https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors</a></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.Error">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">Error</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#Error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://python.readthedocs.io/en/latest/library/exceptions.html#Exception" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>The base class for all the DB API exceptions.</p>
+<p>Does not include <a class="reference internal" href="#google.cloud.spanner_dbapi.Warning" title="google.cloud.spanner_dbapi.Warning"><code class="xref py py-class docutils literal notranslate"><span class="pre">Warning</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.IntegrityError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">IntegrityError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#IntegrityError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.IntegrityError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.DatabaseError" title="google.cloud.spanner_dbapi.exceptions.DatabaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.DatabaseError</span></code></a></p>
+<p>Error for cases of relational integrity of the database
+is affected, e.g. a foreign key check fails.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.InterfaceError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">InterfaceError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#InterfaceError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.InterfaceError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.Error" title="google.cloud.spanner_dbapi.exceptions.Error"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.Error</span></code></a></p>
+<p>Error related to the database interface
+rather than the database itself.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.InternalError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">InternalError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#InternalError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.InternalError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.DatabaseError" title="google.cloud.spanner_dbapi.exceptions.DatabaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.DatabaseError</span></code></a></p>
+<p>Internal database error, e.g. the cursor is not valid
+anymore, the transaction is out of sync, etc.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.NotSupportedError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">NotSupportedError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#NotSupportedError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.NotSupportedError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.DatabaseError" title="google.cloud.spanner_dbapi.exceptions.DatabaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.DatabaseError</span></code></a></p>
+<p>Error for case of a method or database API not
+supported by the database was used.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.OperationalError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">OperationalError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#OperationalError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.OperationalError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.DatabaseError" title="google.cloud.spanner_dbapi.exceptions.DatabaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.DatabaseError</span></code></a></p>
+<p>Error related to the database’s operation, e.g. an
+unexpected disconnect, the data source name is not
+found, a transaction could not be processed, a
+memory allocation error, etc.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.ProgrammingError">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">ProgrammingError</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#ProgrammingError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.ProgrammingError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#google.cloud.spanner_dbapi.exceptions.DatabaseError" title="google.cloud.spanner_dbapi.exceptions.DatabaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.exceptions.DatabaseError</span></code></a></p>
+<p>Programming error, e.g. table not found or already
+exists, syntax error in the SQL statement, wrong
+number of parameters specified, etc.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="google.cloud.spanner_dbapi.Time">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">Time</code><a class="headerlink" href="#google.cloud.spanner_dbapi.Time" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference external" href="https://python.readthedocs.io/en/latest/library/datetime.html#datetime.time" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">datetime.time</span></code></a></p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.TimeFromTicks">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">TimeFromTicks</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ticks</span></em><span class="sig-paren">)</span><a class="headerlink" href="#google.cloud.spanner_dbapi.TimeFromTicks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Based on PEP-249 Implementation Hints for Module Authors:</p>
+<p><a class="reference external" href="https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors">https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors</a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="google.cloud.spanner_dbapi.Timestamp">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">Timestamp</code><a class="headerlink" href="#google.cloud.spanner_dbapi.Timestamp" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference external" href="https://python.readthedocs.io/en/latest/library/datetime.html#datetime.datetime" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">datetime.datetime</span></code></a></p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.TimestampFromTicks">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">TimestampFromTicks</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ticks</span></em><span class="sig-paren">)</span><a class="headerlink" href="#google.cloud.spanner_dbapi.TimestampFromTicks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Based on PEP-249 Implementation Hints for Module Authors:</p>
+<p><a class="reference external" href="https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors">https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors</a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="google.cloud.spanner_dbapi.TimestampStr">
+<em class="property">class </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">TimestampStr</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/types.html#TimestampStr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.TimestampStr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></p>
+<p>[inherited from the alpha release]</p>
+<p>TODO: Decide whether this class is necessary</p>
+<p>TimestampStr exists so that we can purposefully format types as timestamps
+compatible with Cloud Spanner’s TIMESTAMP type, but right before making
+queries, it’ll help differentiate between normal strings and the case of
+types that should be TIMESTAMP.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="google.cloud.spanner_dbapi.Warning">
+<em class="property">exception </em><code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">Warning</code><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/exceptions.html#Warning"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.Warning" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://python.readthedocs.io/en/latest/library/exceptions.html#Exception" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>Important DB API warning.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.connect">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">connect</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">instance_id</span></em>, <em class="sig-param"><span class="n">database_id</span></em>, <em class="sig-param"><span class="n">project</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">credentials</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">pool</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">user_agent</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/connection.html#connect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.connect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a connection to a Google Cloud Spanner database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>instance_id</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – The ID of the instance to connect to.</p></li>
+<li><p><strong>database_id</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – The ID of the database to connect to.</p></li>
+<li><p><strong>project</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – (Optional) The ID of the project which owns the
+instances, tables and data. If not provided, will
+attempt to determine from the environment.</p></li>
+<li><p><strong>credentials</strong> (<a class="reference external" href="https://google-auth.readthedocs.io/en/stable/reference/google.auth.credentials.html#google.auth.credentials.Credentials" title="(in google-auth v1.18.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Credentials</span></code></a>) – (Optional) The authorization credentials to attach to
+requests. These credentials identify this application
+to the service. If none are specified, the client will
+attempt to ascertain the credentials from the
+environment.</p></li>
+<li><p><strong>pool</strong> (Concrete subclass of
+<code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractSessionPool</span></code>.) – (Optional). Session pool to be used by database.</p></li>
+<li><p><strong>user_agent</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – (Optional) User agent to be used with this connection’s
+requests.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#google.cloud.spanner_dbapi.connection.Connection" title="google.cloud.spanner_dbapi.connection.Connection"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.cloud.spanner_dbapi.connection.Connection</span></code></a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Connection object associated with the given Google Cloud Spanner
+resource.</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/exceptions.html#ValueError" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code></a> in case of given instance/database
+doesn’t exist.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="google.cloud.spanner_dbapi.get_param_types">
+<code class="sig-prename descclassname">google.cloud.spanner_dbapi.</code><code class="sig-name descname">get_param_types</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">params</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/google/cloud/spanner_dbapi/parse_utils.html#get_param_types"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.cloud.spanner_dbapi.get_param_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine Cloud Spanner types for the given parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>params</strong> (<a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#dict" title="(in Python v3.7)"><em>dict</em></a>) – Parameters requiring to find Cloud Spanner types.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://python.readthedocs.io/en/latest/library/stdtypes.html#dict" title="(in Python v3.7)">dict</a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The types index for the given parameters.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">google-cloud-spanner-django</a></h1>
+
+
+
+<p class="blurb">Django API Libraries for google-cloud-spanner</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=googleapis&repo=python-spanner-django&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="connection-usage.html">DB API Connection</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api-reference.html">API Reference</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Google.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.3.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/spanner_dbapi.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/googleapis/python-spanner-django" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

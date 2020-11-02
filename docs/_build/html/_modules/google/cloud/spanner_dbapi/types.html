@@ -1,0 +1,220 @@
+
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>google.cloud.spanner_dbapi.types &#8212; google-cloud-spanner-django 2.2.0a1 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for google.cloud.spanner_dbapi.types</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2020 Google LLC</span>
+<span class="c1">#</span>
+<span class="c1"># Use of this source code is governed by a BSD-style</span>
+<span class="c1"># license that can be found in the LICENSE file or at</span>
+<span class="c1"># https://developers.google.com/open-source/licenses/bsd</span>
+
+<span class="sd">&quot;&quot;&quot;Implementation of the type objects and constructors according to the</span>
+<span class="sd">   PEP-0249 specification.</span>
+
+<span class="sd">   See</span>
+<span class="sd">   https://www.python.org/dev/peps/pep-0249/#type-objects-and-constructors</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">base64</span> <span class="kn">import</span> <span class="n">b64encode</span>
+
+
+<span class="k">def</span> <span class="nf">_date_from_ticks</span><span class="p">(</span><span class="n">ticks</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Based on PEP-249 Implementation Hints for Module Authors:</span>
+
+<span class="sd">    https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Date</span><span class="p">(</span><span class="o">*</span><span class="n">time</span><span class="o">.</span><span class="n">localtime</span><span class="p">(</span><span class="n">ticks</span><span class="p">)[:</span><span class="mi">3</span><span class="p">])</span>
+
+
+<span class="k">def</span> <span class="nf">_time_from_ticks</span><span class="p">(</span><span class="n">ticks</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Based on PEP-249 Implementation Hints for Module Authors:</span>
+
+<span class="sd">    https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Time</span><span class="p">(</span><span class="o">*</span><span class="n">time</span><span class="o">.</span><span class="n">localtime</span><span class="p">(</span><span class="n">ticks</span><span class="p">)[</span><span class="mi">3</span><span class="p">:</span><span class="mi">6</span><span class="p">])</span>
+
+
+<span class="k">def</span> <span class="nf">_timestamp_from_ticks</span><span class="p">(</span><span class="n">ticks</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Based on PEP-249 Implementation Hints for Module Authors:</span>
+
+<span class="sd">    https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Timestamp</span><span class="p">(</span><span class="o">*</span><span class="n">time</span><span class="o">.</span><span class="n">localtime</span><span class="p">(</span><span class="n">ticks</span><span class="p">)[:</span><span class="mi">6</span><span class="p">])</span>
+
+
+<span class="k">class</span> <span class="nc">_DBAPITypeObject</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Implementation of a helper class used for type comparison among similar</span>
+<span class="sd">    but possibly different types.</span>
+
+<span class="sd">    See</span>
+<span class="sd">    https://www.python.org/dev/peps/pep-0249/#implementation-hints-for-module-authors</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">values</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="n">values</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">other</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">values</span>
+
+
+<span class="n">Date</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span>
+<span class="n">Time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">time</span>
+<span class="n">Timestamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span>
+<span class="n">DateFromTicks</span> <span class="o">=</span> <span class="n">_date_from_ticks</span>
+<span class="n">TimeFromTicks</span> <span class="o">=</span> <span class="n">_time_from_ticks</span>
+<span class="n">TimestampFromTicks</span> <span class="o">=</span> <span class="n">_timestamp_from_ticks</span>
+<span class="n">Binary</span> <span class="o">=</span> <span class="n">b64encode</span>
+
+<span class="n">STRING</span> <span class="o">=</span> <span class="s2">&quot;STRING&quot;</span>
+<span class="n">BINARY</span> <span class="o">=</span> <span class="n">_DBAPITypeObject</span><span class="p">(</span><span class="s2">&quot;TYPE_CODE_UNSPECIFIED&quot;</span><span class="p">,</span> <span class="s2">&quot;BYTES&quot;</span><span class="p">,</span> <span class="s2">&quot;ARRAY&quot;</span><span class="p">,</span> <span class="s2">&quot;STRUCT&quot;</span><span class="p">)</span>
+<span class="n">NUMBER</span> <span class="o">=</span> <span class="n">_DBAPITypeObject</span><span class="p">(</span><span class="s2">&quot;BOOL&quot;</span><span class="p">,</span> <span class="s2">&quot;INT64&quot;</span><span class="p">,</span> <span class="s2">&quot;FLOAT64&quot;</span><span class="p">,</span> <span class="s2">&quot;NUMERIC&quot;</span><span class="p">)</span>
+<span class="n">DATETIME</span> <span class="o">=</span> <span class="n">_DBAPITypeObject</span><span class="p">(</span><span class="s2">&quot;TIMESTAMP&quot;</span><span class="p">,</span> <span class="s2">&quot;DATE&quot;</span><span class="p">)</span>
+<span class="n">ROWID</span> <span class="o">=</span> <span class="s2">&quot;STRING&quot;</span>
+
+
+<div class="viewcode-block" id="TimestampStr"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.types.TimestampStr">[docs]</a><span class="k">class</span> <span class="nc">TimestampStr</span><span class="p">(</span><span class="nb">str</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;[inherited from the alpha release]</span>
+
+<span class="sd">    TODO: Decide whether this class is necessary</span>
+
+<span class="sd">    TimestampStr exists so that we can purposefully format types as timestamps</span>
+<span class="sd">    compatible with Cloud Spanner&#39;s TIMESTAMP type, but right before making</span>
+<span class="sd">    queries, it&#39;ll help differentiate between normal strings and the case of</span>
+<span class="sd">    types that should be TIMESTAMP.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="DateStr"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.types.DateStr">[docs]</a><span class="k">class</span> <span class="nc">DateStr</span><span class="p">(</span><span class="nb">str</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;[inherited from the alpha release]</span>
+
+<span class="sd">    TODO: Decide whether this class is necessary</span>
+
+<span class="sd">    DateStr is a sentinel type to help format Django dates as</span>
+<span class="sd">    compatible with Cloud Spanner&#39;s DATE type, but right before making</span>
+<span class="sd">    queries, it&#39;ll help differentiate between normal strings and the case of</span>
+<span class="sd">    types that should be DATE.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">pass</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">google-cloud-spanner-django</a></h1>
+
+
+
+<p class="blurb">Django API Libraries for google-cloud-spanner</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=googleapis&repo=python-spanner-django&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../connection-usage.html">DB API Connection</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api-reference.html">API Reference</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Changelog</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Google.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.3.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/googleapis/python-spanner-django" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

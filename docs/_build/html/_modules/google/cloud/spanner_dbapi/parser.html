@@ -1,0 +1,403 @@
+
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>google.cloud.spanner_dbapi.parser &#8212; google-cloud-spanner-django 2.2.0a1 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for google.cloud.spanner_dbapi.parser</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2020 Google LLC</span>
+<span class="c1">#</span>
+<span class="c1"># Use of this source code is governed by a BSD-style</span>
+<span class="c1"># license that can be found in the LICENSE file or at</span>
+<span class="c1"># https://developers.google.com/open-source/licenses/bsd</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Grammar for parsing VALUES:</span>
+<span class="sd">    VALUES      := `VALUES(` + ARGS + `)`</span>
+<span class="sd">    ARGS        := [EXPR,]*EXPR</span>
+<span class="sd">    EXPR        := TERMINAL / FUNC</span>
+<span class="sd">    TERMINAL    := `%s`</span>
+<span class="sd">    FUNC        := alphanum + `(` + ARGS + `)`</span>
+<span class="sd">    alphanum    := (a-zA-Z_)[0-9a-ZA-Z_]*</span>
+
+<span class="sd">thus given:</span>
+<span class="sd">    statement: &#39;VALUES (%s, %s), (%s, LOWER(UPPER(%s)))   , (%s)&#39;</span>
+<span class="sd">    It&#39;ll parse:</span>
+<span class="sd">        VALUES</span>
+<span class="sd">            |- ARGS</span>
+<span class="sd">                |- (TERMINAL, TERMINAL)</span>
+<span class="sd">                |- (TERMINAL, FUNC</span>
+<span class="sd">                                |- FUNC</span>
+<span class="sd">                                    |- (TERMINAL)</span>
+<span class="sd">                |- (TERMINAL)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">.exceptions</span> <span class="kn">import</span> <span class="n">ProgrammingError</span>
+
+<span class="n">ARGS</span> <span class="o">=</span> <span class="s2">&quot;ARGS&quot;</span>
+<span class="n">EXPR</span> <span class="o">=</span> <span class="s2">&quot;EXPR&quot;</span>
+<span class="n">FUNC</span> <span class="o">=</span> <span class="s2">&quot;FUNC&quot;</span>
+<span class="n">VALUES</span> <span class="o">=</span> <span class="s2">&quot;VALUES&quot;</span>
+
+
+<div class="viewcode-block" id="func"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parser.func">[docs]</a><span class="k">class</span> <span class="nc">func</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func_name</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">func_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="n">args</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">args</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">args</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">args</span>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="terminal"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parser.terminal">[docs]</a><span class="k">class</span> <span class="nc">terminal</span><span class="p">(</span><span class="nb">str</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Represent the unit symbol that can be part of a SQL values clause.&quot;&quot;&quot;</span>
+
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="a_args"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parser.a_args">[docs]</a><span class="k">class</span> <span class="nc">a_args</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Expression arguments.</span>
+
+<span class="sd">    :type argv: list</span>
+<span class="sd">    :param argv: A List of expression arguments.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">argv</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">argv</span> <span class="o">=</span> <span class="n">argv</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;(&quot;</span> <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">argv</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;)&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+
+<div class="viewcode-block" id="a_args.has_expr"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parser.a_args.has_expr">[docs]</a>    <span class="k">def</span> <span class="nf">has_expr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">any</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">token</span> <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">argv</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">terminal</span><span class="p">)]</span>
+        <span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">other</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">item</span> <span class="o">!=</span> <span class="n">other</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+
+<div class="viewcode-block" id="a_args.homogenous"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parser.a_args.homogenous">[docs]</a>    <span class="k">def</span> <span class="nf">homogenous</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check arguments of the expression to be homogeneous.</span>
+
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        :return: True if all the arguments of the expression are in pyformat</span>
+<span class="sd">                 and each has the same length, False otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_equal_length</span><span class="p">():</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">argv</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="n">terminal</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="n">a_args</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">arg</span><span class="o">.</span><span class="n">homogenous</span><span class="p">():</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+    <span class="k">def</span> <span class="nf">_is_equal_length</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return False if all the arguments have the same length.</span>
+
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        :return: False if the sequences of the arguments have the same length.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+
+        <span class="n">arg0_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span> <span class="o">!=</span> <span class="n">arg0_len</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="values"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parser.values">[docs]</a><span class="k">class</span> <span class="nc">values</span><span class="p">(</span><span class="n">a_args</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A wrapper for values.</span>
+
+<span class="sd">    :rtype: str</span>
+<span class="sd">    :returns: A string of the values expression in a tree view.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;VALUES</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="parse_values"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parser.parse_values">[docs]</a><span class="k">def</span> <span class="nf">parse_values</span><span class="p">(</span><span class="n">stmt</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">expect</span><span class="p">(</span><span class="n">stmt</span><span class="p">,</span> <span class="n">VALUES</span><span class="p">)</span></div>
+
+
+<span class="n">pyfmt_str</span> <span class="o">=</span> <span class="n">terminal</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="expect"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parser.expect">[docs]</a><span class="k">def</span> <span class="nf">expect</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="n">token</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Parse the given expression recursively.</span>
+
+<span class="sd">    :type word: str</span>
+<span class="sd">    :param word: A string expression.</span>
+
+<span class="sd">    :type token: str</span>
+<span class="sd">    :param token: An expression token.</span>
+
+<span class="sd">    :rtype: (str, Any)</span>
+<span class="sd">    :returns: A tuple containing the rest of the expression string and the tree</span>
+<span class="sd">              of the already parsed.</span>
+<span class="sd">    :raises :class:`ProgrammingError`: If there is a parsing error.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">word</span> <span class="o">=</span> <span class="n">word</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">token</span> <span class="o">==</span> <span class="n">VALUES</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">word</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;VALUES&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">ProgrammingError</span><span class="p">(</span>
+                <span class="s2">&quot;VALUES: `</span><span class="si">%s</span><span class="s2">` does not start with VALUES&quot;</span> <span class="o">%</span> <span class="n">word</span>
+            <span class="p">)</span>
+        <span class="n">word</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="s2">&quot;VALUES&quot;</span><span class="p">)</span> <span class="p">:]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span>
+
+        <span class="n">all_args</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="n">word</span><span class="p">:</span>
+            <span class="n">word</span> <span class="o">=</span> <span class="n">word</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+            <span class="n">word</span><span class="p">,</span> <span class="n">arg</span> <span class="o">=</span> <span class="n">expect</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="n">ARGS</span><span class="p">)</span>
+            <span class="n">all_args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
+            <span class="n">word</span> <span class="o">=</span> <span class="n">word</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">word</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">word</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">ProgrammingError</span><span class="p">(</span>
+                    <span class="s2">&quot;VALUES: expected `,` got </span><span class="si">%s</span><span class="s2"> in </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">word</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="n">word</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">values</span><span class="p">(</span><span class="n">all_args</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">token</span> <span class="o">==</span> <span class="n">FUNC</span><span class="p">:</span>
+        <span class="n">begins_with_letter</span> <span class="o">=</span> <span class="n">word</span> <span class="ow">and</span> <span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">isalpha</span><span class="p">()</span> <span class="ow">or</span> <span class="n">word</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">begins_with_letter</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ProgrammingError</span><span class="p">(</span>
+                <span class="s2">&quot;FUNC: `</span><span class="si">%s</span><span class="s2">` does not begin with `a-zA-z` nor a `_`&quot;</span> <span class="o">%</span> <span class="n">word</span>
+            <span class="p">)</span>
+
+        <span class="n">rest</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">rest</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">ch</span><span class="o">.</span><span class="n">isalnum</span><span class="p">()</span> <span class="ow">or</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;_&quot;</span><span class="p">:</span>
+                <span class="n">end</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">break</span>
+
+        <span class="n">func_name</span><span class="p">,</span> <span class="n">rest</span> <span class="o">=</span> <span class="n">word</span><span class="p">[:</span> <span class="n">end</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">word</span><span class="p">[</span><span class="n">end</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">:]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+        <span class="n">word</span><span class="p">,</span> <span class="n">args</span> <span class="o">=</span> <span class="n">expect</span><span class="p">(</span><span class="n">rest</span><span class="p">,</span> <span class="n">ARGS</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">word</span><span class="p">,</span> <span class="n">func</span><span class="p">(</span><span class="n">func_name</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">token</span> <span class="o">==</span> <span class="n">ARGS</span><span class="p">:</span>
+        <span class="c1"># The form should be:</span>
+        <span class="c1">#   (%s)</span>
+        <span class="c1">#   (%s, %s...)</span>
+        <span class="c1">#   (FUNC, %s...)</span>
+        <span class="c1">#   (%s, %s...)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">word</span> <span class="ow">and</span> <span class="n">word</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;(&quot;</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="n">ProgrammingError</span><span class="p">(</span>
+                <span class="s2">&quot;ARGS: supposed to begin with `(` in `</span><span class="si">%s</span><span class="s2">`&quot;</span> <span class="o">%</span> <span class="n">word</span>
+            <span class="p">)</span>
+
+        <span class="n">word</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+        <span class="n">terms</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">word</span> <span class="o">=</span> <span class="n">word</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">word</span> <span class="ow">or</span> <span class="n">word</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;)&quot;</span><span class="p">):</span>
+                <span class="k">break</span>
+
+            <span class="k">if</span> <span class="n">word</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">:</span>
+                <span class="n">terms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pyfmt_str</span><span class="p">)</span>
+                <span class="n">word</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="n">word</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">):</span>
+                <span class="n">word</span><span class="p">,</span> <span class="n">parsed</span> <span class="o">=</span> <span class="n">expect</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="n">FUNC</span><span class="p">)</span>
+                <span class="n">terms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parsed</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">terms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pyfmt_str</span><span class="p">)</span>
+                <span class="n">word</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">word</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">):</span>
+                <span class="n">word</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">word</span> <span class="ow">and</span> <span class="n">word</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;)&quot;</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="n">ProgrammingError</span><span class="p">(</span>
+                <span class="s2">&quot;ARGS: supposed to end with `)` in `</span><span class="si">%s</span><span class="s2">`&quot;</span> <span class="o">%</span> <span class="n">word</span>
+            <span class="p">)</span>
+
+        <span class="n">word</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="n">word</span><span class="p">,</span> <span class="n">a_args</span><span class="p">(</span><span class="n">terms</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">token</span> <span class="o">==</span> <span class="n">EXPR</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">word</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">:</span>
+            <span class="c1"># Terminal symbol.</span>
+            <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">pyfmt_str</span>
+
+        <span class="c1"># Otherwise we expect a function.</span>
+        <span class="k">return</span> <span class="n">expect</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="n">FUNC</span><span class="p">)</span>
+
+    <span class="k">raise</span> <span class="n">ProgrammingError</span><span class="p">(</span><span class="s2">&quot;Unknown token `</span><span class="si">%s</span><span class="s2">`&quot;</span> <span class="o">%</span> <span class="n">token</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="as_values"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parser.as_values">[docs]</a><span class="k">def</span> <span class="nf">as_values</span><span class="p">(</span><span class="n">values_stmt</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return the parsed values.</span>
+
+<span class="sd">    :type values_stmt: str</span>
+<span class="sd">    :param values_stmt: Raw values.</span>
+
+<span class="sd">    :rtype: Any</span>
+<span class="sd">    :returns: A tree of the already parsed expression.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">_values</span> <span class="o">=</span> <span class="n">parse_values</span><span class="p">(</span><span class="n">values_stmt</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_values</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">google-cloud-spanner-django</a></h1>
+
+
+
+<p class="blurb">Django API Libraries for google-cloud-spanner</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=googleapis&repo=python-spanner-django&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../connection-usage.html">DB API Connection</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api-reference.html">API Reference</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Changelog</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Google.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.3.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/googleapis/python-spanner-django" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

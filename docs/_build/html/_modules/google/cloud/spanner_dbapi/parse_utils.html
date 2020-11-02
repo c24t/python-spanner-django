@@ -1,0 +1,699 @@
+
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>google.cloud.spanner_dbapi.parse_utils &#8212; google-cloud-spanner-django 2.2.0a1 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for google.cloud.spanner_dbapi.parse_utils</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2020 Google LLC</span>
+<span class="c1">#</span>
+<span class="c1"># Use of this source code is governed by a BSD-style</span>
+<span class="c1"># license that can be found in the LICENSE file or at</span>
+<span class="c1"># https://developers.google.com/open-source/licenses/bsd</span>
+
+<span class="s2">&quot;SQL parsing and classification utils.&quot;</span>
+
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">decimal</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">reduce</span>
+
+<span class="kn">import</span> <span class="nn">sqlparse</span>
+<span class="kn">from</span> <span class="nn">google.cloud</span> <span class="kn">import</span> <span class="n">spanner_v1</span> <span class="k">as</span> <span class="n">spanner</span>
+
+<span class="kn">from</span> <span class="nn">.exceptions</span> <span class="kn">import</span> <span class="n">Error</span><span class="p">,</span> <span class="n">ProgrammingError</span>
+<span class="kn">from</span> <span class="nn">.parser</span> <span class="kn">import</span> <span class="n">parse_values</span>
+<span class="kn">from</span> <span class="nn">.types</span> <span class="kn">import</span> <span class="n">DateStr</span><span class="p">,</span> <span class="n">TimestampStr</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">sanitize_literals_for_upload</span>
+
+<span class="n">TYPES_MAP</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nb">bool</span><span class="p">:</span> <span class="n">spanner</span><span class="o">.</span><span class="n">param_types</span><span class="o">.</span><span class="n">BOOL</span><span class="p">,</span>
+    <span class="nb">bytes</span><span class="p">:</span> <span class="n">spanner</span><span class="o">.</span><span class="n">param_types</span><span class="o">.</span><span class="n">BYTES</span><span class="p">,</span>
+    <span class="nb">str</span><span class="p">:</span> <span class="n">spanner</span><span class="o">.</span><span class="n">param_types</span><span class="o">.</span><span class="n">STRING</span><span class="p">,</span>
+    <span class="nb">int</span><span class="p">:</span> <span class="n">spanner</span><span class="o">.</span><span class="n">param_types</span><span class="o">.</span><span class="n">INT64</span><span class="p">,</span>
+    <span class="nb">float</span><span class="p">:</span> <span class="n">spanner</span><span class="o">.</span><span class="n">param_types</span><span class="o">.</span><span class="n">FLOAT64</span><span class="p">,</span>
+    <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">:</span> <span class="n">spanner</span><span class="o">.</span><span class="n">param_types</span><span class="o">.</span><span class="n">TIMESTAMP</span><span class="p">,</span>
+    <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">:</span> <span class="n">spanner</span><span class="o">.</span><span class="n">param_types</span><span class="o">.</span><span class="n">DATE</span><span class="p">,</span>
+    <span class="n">DateStr</span><span class="p">:</span> <span class="n">spanner</span><span class="o">.</span><span class="n">param_types</span><span class="o">.</span><span class="n">DATE</span><span class="p">,</span>
+    <span class="n">TimestampStr</span><span class="p">:</span> <span class="n">spanner</span><span class="o">.</span><span class="n">param_types</span><span class="o">.</span><span class="n">TIMESTAMP</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">SPANNER_RESERVED_KEYWORDS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;ALL&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;AND&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ANY&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ARRAY&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;AS&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ASC&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ASSERT_ROWS_MODIFIED&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;AT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;BETWEEN&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;BY&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;CASE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;CAST&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;COLLATE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;CONTAINS&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;CREATE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;CROSS&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;CUBE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;CURRENT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;DEFAULT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;DEFINE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;DESC&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;DISTINCT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;DROP&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ELSE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;END&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ENUM&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ESCAPE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;EXCEPT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;EXCLUDE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;EXISTS&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;EXTRACT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;FALSE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;FETCH&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;FOLLOWING&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;FOR&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;FROM&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;FULL&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;GROUP&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;GROUPING&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;GROUPS&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HASH&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HAVING&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;IF&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;IGNORE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;IN&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;INNER&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;INTERSECT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;INTERVAL&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;INTO&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;IS&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;JOIN&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;LATERAL&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;LEFT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;LIKE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;LIMIT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;LOOKUP&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;MERGE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NATURAL&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NEW&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NO&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NOT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NULL&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NULLS&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;OF&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ON&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;OR&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ORDER&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;OUTER&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;OVER&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;PARTITION&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;PRECEDING&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;PROTO&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;RANGE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;RECURSIVE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;RESPECT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;RIGHT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ROLLUP&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ROWS&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;SELECT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;SET&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;SOME&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;STRUCT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;TABLESAMPLE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;THEN&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;TO&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;TREAT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;TRUE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;UNBOUNDED&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;UNION&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;UNNEST&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;USING&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;WHEN&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;WHERE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;WINDOW&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;WITH&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;WITHIN&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">STMT_DDL</span> <span class="o">=</span> <span class="s2">&quot;DDL&quot;</span>
+<span class="n">STMT_NON_UPDATING</span> <span class="o">=</span> <span class="s2">&quot;NON_UPDATING&quot;</span>
+<span class="n">STMT_UPDATING</span> <span class="o">=</span> <span class="s2">&quot;UPDATING&quot;</span>
+<span class="n">STMT_INSERT</span> <span class="o">=</span> <span class="s2">&quot;INSERT&quot;</span>
+
+<span class="c1"># Heuristic for identifying statements that don&#39;t need to be run as updates.</span>
+<span class="n">RE_NON_UPDATE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^\s*(SELECT)&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+
+<span class="n">RE_WITH</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^\s*(WITH)&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+
+<span class="c1"># DDL statements follow</span>
+<span class="c1"># https://cloud.google.com/spanner/docs/data-definition-language</span>
+<span class="n">RE_DDL</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^\s*(CREATE|ALTER|DROP)&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span> <span class="o">|</span> <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">)</span>
+
+<span class="n">RE_IS_INSERT</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^\s*(INSERT)&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span> <span class="o">|</span> <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">)</span>
+
+<span class="n">RE_INSERT</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+    <span class="c1"># Only match the `INSERT INTO &lt;table_name&gt; (columns...)</span>
+    <span class="c1"># otherwise the rest of the statement could be a complex</span>
+    <span class="c1"># operation.</span>
+    <span class="sa">r</span><span class="s2">&quot;^\s*INSERT INTO (?P&lt;table_name&gt;[^\s\(\)]+)\s*\((?P&lt;columns&gt;[^\(\)]+)\)&quot;</span><span class="p">,</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span> <span class="o">|</span> <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">RE_VALUES_TILL_END</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;VALUES\s*\(.+$&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span> <span class="o">|</span> <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">)</span>
+
+<span class="n">RE_VALUES_PYFORMAT</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+    <span class="c1"># To match: (%s, %s,....%s)</span>
+    <span class="sa">r</span><span class="s2">&quot;(\(\s*</span><span class="si">%s</span><span class="s2">[^\(\)]+\))&quot;</span><span class="p">,</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">RE_PYFORMAT</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(</span><span class="si">%s</span><span class="s2">|%\([^\(\)]+\)s)+&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="classify_stmt"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parse_utils.classify_stmt">[docs]</a><span class="k">def</span> <span class="nf">classify_stmt</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Determine SQL query type.</span>
+
+<span class="sd">    :type query: str</span>
+<span class="sd">    :param query: A SQL query.</span>
+
+<span class="sd">    :rtype: str</span>
+<span class="sd">    :returns: The query type name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">RE_DDL</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">STMT_DDL</span>
+
+    <span class="k">if</span> <span class="n">RE_IS_INSERT</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">STMT_INSERT</span>
+
+    <span class="k">if</span> <span class="n">RE_NON_UPDATE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">query</span><span class="p">)</span> <span class="ow">or</span> <span class="n">RE_WITH</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+        <span class="c1"># As of 13-March-2020, Cloud Spanner only supports WITH for DQL</span>
+        <span class="c1"># statements and doesn&#39;t yet support WITH for DML statements.</span>
+        <span class="k">return</span> <span class="n">STMT_NON_UPDATING</span>
+
+    <span class="k">return</span> <span class="n">STMT_UPDATING</span></div>
+
+
+<div class="viewcode-block" id="parse_insert"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parse_utils.parse_insert">[docs]</a><span class="k">def</span> <span class="nf">parse_insert</span><span class="p">(</span><span class="n">insert_sql</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parse an INSERT statement an generate a list of tuples of the form:</span>
+<span class="sd">        [</span>
+<span class="sd">            (SQL, params_per_row1),</span>
+<span class="sd">            (SQL, params_per_row2),</span>
+<span class="sd">            (SQL, params_per_row3),</span>
+<span class="sd">            ...</span>
+<span class="sd">        ]</span>
+
+<span class="sd">    There are 4 variants of an INSERT statement:</span>
+<span class="sd">    a) INSERT INTO &lt;table&gt; (columns...) VALUES (&lt;inlined values&gt;): no params</span>
+<span class="sd">    b) INSERT INTO &lt;table&gt; (columns...) SELECT_STMT:               no params</span>
+<span class="sd">    c) INSERT INTO &lt;table&gt; (columns...) VALUES (%s,...):           with params</span>
+<span class="sd">    d) INSERT INTO &lt;table&gt; (columns...) VALUES (%s,..&lt;EXPR&gt;...)    with params and expressions</span>
+
+<span class="sd">    Thus given each of the forms, it will produce a dictionary describing</span>
+<span class="sd">    how to upload the contents to Cloud Spanner:</span>
+<span class="sd">    Case a)</span>
+<span class="sd">            SQL: INSERT INTO T (f1, f2) VALUES (1, 2)</span>
+<span class="sd">        it produces:</span>
+<span class="sd">            {</span>
+<span class="sd">                &#39;sql_params_list&#39;: [</span>
+<span class="sd">                    (&#39;INSERT INTO T (f1, f2) VALUES (1, 2)&#39;, None),</span>
+<span class="sd">                ],</span>
+<span class="sd">            }</span>
+
+<span class="sd">    Case b)</span>
+<span class="sd">            SQL: &#39;INSERT INTO T (s, c) SELECT st, zc FROM cus ORDER BY fn, ln&#39;,</span>
+<span class="sd">        it produces:</span>
+<span class="sd">            {</span>
+<span class="sd">                &#39;sql_params_list&#39;: [</span>
+<span class="sd">                    (&#39;INSERT INTO T (s, c) SELECT st, zc FROM cus ORDER BY fn, ln&#39;, None),</span>
+<span class="sd">                ]</span>
+<span class="sd">            }</span>
+
+<span class="sd">    Case c)</span>
+<span class="sd">            SQL: INSERT INTO T (f1, f2) VALUES (%s, %s), (%s, %s)</span>
+<span class="sd">            Params: [&#39;a&#39;, &#39;b&#39;, &#39;c&#39;, &#39;d&#39;]</span>
+<span class="sd">        it produces:</span>
+<span class="sd">            {</span>
+<span class="sd">                &#39;homogenous&#39;: True,</span>
+<span class="sd">                &#39;table&#39;: &#39;T&#39;,</span>
+<span class="sd">                &#39;columns&#39;: [&#39;f1&#39;, &#39;f2&#39;],</span>
+<span class="sd">                &#39;values&#39;: [(&#39;a&#39;, &#39;b&#39;,), (&#39;c&#39;, &#39;d&#39;,)],</span>
+<span class="sd">            }</span>
+
+<span class="sd">    Case d)</span>
+<span class="sd">            SQL: INSERT INTO T (f1, f2) VALUES (%s, LOWER(%s)), (UPPER(%s), %s)</span>
+<span class="sd">            Params: [&#39;a&#39;, &#39;b&#39;, &#39;c&#39;, &#39;d&#39;]</span>
+<span class="sd">        it produces:</span>
+<span class="sd">            {</span>
+<span class="sd">                &#39;sql_params_list&#39;: [</span>
+<span class="sd">                    (&#39;INSERT INTO T (f1, f2) VALUES (%s, LOWER(%s))&#39;, (&#39;a&#39;, &#39;b&#39;,))</span>
+<span class="sd">                    (&#39;INSERT INTO T (f1, f2) VALUES (UPPER(%s), %s)&#39;, (&#39;c&#39;, &#39;d&#39;,))</span>
+<span class="sd">                ],</span>
+<span class="sd">            }</span>
+
+<span class="sd">    :type insert_sql: str</span>
+<span class="sd">    :param insert_sql: A SQL insert request.</span>
+
+<span class="sd">    :type params: list</span>
+<span class="sd">    :param params: A list of parameters.</span>
+
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    :returns: A dictionary that maps `sql_params_list` to the list of</span>
+<span class="sd">              parameters in cases a), b), d) or the dictionary with</span>
+<span class="sd">              information about the resulting table in case c).</span>
+<span class="sd">    &quot;&quot;&quot;</span>  <span class="c1"># noqa</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">RE_INSERT</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">insert_sql</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ProgrammingError</span><span class="p">(</span>
+            <span class="s2">&quot;Could not parse an INSERT statement from </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">insert_sql</span>
+        <span class="p">)</span>
+
+    <span class="n">after_values_sql</span> <span class="o">=</span> <span class="n">RE_VALUES_TILL_END</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">insert_sql</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">after_values_sql</span><span class="p">:</span>
+        <span class="c1"># Case b)</span>
+        <span class="n">insert_sql</span> <span class="o">=</span> <span class="n">sanitize_literals_for_upload</span><span class="p">(</span><span class="n">insert_sql</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;sql_params_list&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="n">insert_sql</span><span class="p">,</span> <span class="kc">None</span><span class="p">)]}</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">params</span><span class="p">:</span>
+        <span class="c1"># Case a) perhaps?</span>
+        <span class="c1"># Check if any %s exists.</span>
+
+        <span class="c1"># pyformat_str_count = after_values_sql.count(&quot;%s&quot;)</span>
+        <span class="c1"># if pyformat_str_count &gt; 0:</span>
+        <span class="c1">#     raise ProgrammingError(</span>
+        <span class="c1">#         &#39;no params yet there are %d &quot;%%s&quot; tokens&#39; % pyformat_str_count</span>
+        <span class="c1">#     )</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">after_values_sql</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ProgrammingError</span><span class="p">(</span>
+                    <span class="s1">&#39;no params yet there are </span><span class="si">%d</span><span class="s1"> &quot;</span><span class="si">%%</span><span class="s1">s&quot; tokens&#39;</span>
+                    <span class="o">%</span> <span class="n">item</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="p">)</span>
+
+        <span class="n">insert_sql</span> <span class="o">=</span> <span class="n">sanitize_literals_for_upload</span><span class="p">(</span><span class="n">insert_sql</span><span class="p">)</span>
+        <span class="c1"># Confirmed case of:</span>
+        <span class="c1"># SQL: INSERT INTO T (a1, a2) VALUES (1, 2)</span>
+        <span class="c1"># Params: None</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;sql_params_list&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="n">insert_sql</span><span class="p">,</span> <span class="kc">None</span><span class="p">)]}</span>
+
+    <span class="n">values_str</span> <span class="o">=</span> <span class="n">after_values_sql</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">values</span> <span class="o">=</span> <span class="n">parse_values</span><span class="p">(</span><span class="n">values_str</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">homogenous</span><span class="p">():</span>
+        <span class="c1"># Case c)</span>
+
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">mi</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot; `&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">mi</span> <span class="ow">in</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">&quot;columns&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)]</span>
+        <span class="n">sql_params_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">insert_sql_preamble</span> <span class="o">=</span> <span class="s2">&quot;INSERT INTO </span><span class="si">%s</span><span class="s2"> (</span><span class="si">%s</span><span class="s2">) VALUES </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">&quot;table_name&quot;</span><span class="p">),</span>
+            <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">&quot;columns&quot;</span><span class="p">),</span>
+            <span class="n">values</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="n">values_pyformat</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">values</span><span class="o">.</span><span class="n">argv</span><span class="p">]</span>
+        <span class="n">rows_list</span> <span class="o">=</span> <span class="n">rows_for_insert_or_update</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">values_pyformat</span><span class="p">)</span>
+        <span class="n">insert_sql_preamble</span> <span class="o">=</span> <span class="n">sanitize_literals_for_upload</span><span class="p">(</span><span class="n">insert_sql_preamble</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows_list</span><span class="p">:</span>
+            <span class="n">sql_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">insert_sql_preamble</span><span class="p">,</span> <span class="n">row</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;sql_params_list&quot;</span><span class="p">:</span> <span class="n">sql_params_list</span><span class="p">}</span>
+
+    <span class="c1"># Case d)</span>
+    <span class="c1"># insert_sql is of the form:</span>
+    <span class="c1">#   INSERT INTO T(c1, c2) VALUES (%s, %s), (%s, LOWER(%s))</span>
+
+    <span class="c1"># Sanity check:</span>
+    <span class="c1">#  length(all_args) == len(params)</span>
+    <span class="n">args_len</span> <span class="o">=</span> <span class="n">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">,</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">values</span><span class="o">.</span><span class="n">argv</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">args_len</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">ProgrammingError</span><span class="p">(</span>
+            <span class="s2">&quot;Invalid length: VALUES(...) len: </span><span class="si">%d</span><span class="s2"> != len(params): </span><span class="si">%d</span><span class="s2">&quot;</span>
+            <span class="o">%</span> <span class="p">(</span><span class="n">args_len</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">))</span>
+        <span class="p">)</span>
+
+    <span class="n">trim_index</span> <span class="o">=</span> <span class="n">insert_sql</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">values_str</span><span class="p">)</span>
+    <span class="n">before_values_sql</span> <span class="o">=</span> <span class="n">insert_sql</span><span class="p">[:</span><span class="n">trim_index</span><span class="p">]</span>
+
+    <span class="n">sql_param_tuples</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">token_arg</span> <span class="ow">in</span> <span class="n">values</span><span class="o">.</span><span class="n">argv</span><span class="p">:</span>
+        <span class="n">row_sql</span> <span class="o">=</span> <span class="n">before_values_sql</span> <span class="o">+</span> <span class="s2">&quot; VALUES</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">token_arg</span>
+        <span class="n">row_sql</span> <span class="o">=</span> <span class="n">sanitize_literals_for_upload</span><span class="p">(</span><span class="n">row_sql</span><span class="p">)</span>
+        <span class="n">row_params</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="nb">tuple</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span> <span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">token_arg</span><span class="p">)]),</span>
+            <span class="n">params</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">token_arg</span><span class="p">)</span> <span class="p">:],</span>
+        <span class="p">)</span>
+        <span class="n">sql_param_tuples</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">row_sql</span><span class="p">,</span> <span class="n">row_params</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;sql_params_list&quot;</span><span class="p">:</span> <span class="n">sql_param_tuples</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="rows_for_insert_or_update"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parse_utils.rows_for_insert_or_update">[docs]</a><span class="k">def</span> <span class="nf">rows_for_insert_or_update</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">pyformat_args</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a tupled list of params to be used as a single value per</span>
+<span class="sd">    value that inserted from a statement such as</span>
+<span class="sd">        SQL:        &#39;INSERT INTO t (f1, f2, f3) VALUES (%s, %s, %s), (%s, %s, %s), (%s, %s, %s)&#39;</span>
+<span class="sd">        Params A:   [(1, 2, 3), (4, 5, 6), (7, 8, 9)]</span>
+<span class="sd">        Params B:   [1, 2, 3, 4, 5, 6, 7, 8, 9]</span>
+
+<span class="sd">    We&#39;ll have to convert both params types into:</span>
+<span class="sd">        Params: [(1, 2, 3,), (4, 5, 6,), (7, 8, 9,)]</span>
+
+<span class="sd">    :type columns: list</span>
+<span class="sd">    :param columns: A list of the columns of the table.</span>
+
+<span class="sd">    :type params: list</span>
+<span class="sd">    :param params: A list of parameters.</span>
+
+<span class="sd">    :rtype: list</span>
+<span class="sd">    :returns: A properly restructured list of the parameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>  <span class="c1"># noqa</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pyformat_args</span><span class="p">:</span>
+        <span class="c1"># This is the case where we have for example:</span>
+        <span class="c1"># SQL:        &#39;INSERT INTO t (f1, f2, f3)&#39;</span>
+        <span class="c1"># Params A:   [(1, 2, 3), (4, 5, 6), (7, 8, 9)]</span>
+        <span class="c1"># Params B:   [1, 2, 3, 4, 5, 6, 7, 8, 9]</span>
+        <span class="c1">#</span>
+        <span class="c1"># We&#39;ll have to convert both params types into:</span>
+        <span class="c1">#           [(1, 2, 3,), (4, 5, 6,), (7, 8, 9,)]</span>
+        <span class="n">contains_all_list_or_tuples</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+                <span class="n">contains_all_list_or_tuples</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">break</span>
+
+        <span class="k">if</span> <span class="n">contains_all_list_or_tuples</span><span class="p">:</span>
+            <span class="c1"># The case with Params A: [(1, 2, 3), (4, 5, 6)]</span>
+            <span class="c1"># Ensure that each param&#39;s length == len(columns)</span>
+            <span class="n">columns_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">columns_len</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">Error</span><span class="p">(</span>
+                        <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">len(`</span><span class="si">%s</span><span class="s2">`)=</span><span class="si">%d</span><span class="se">\n</span><span class="s2">!=</span><span class="se">\n</span><span class="s2">colum_len(`</span><span class="si">%s</span><span class="s2">`)=</span><span class="si">%d</span><span class="s2">&quot;</span>
+                        <span class="o">%</span> <span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="p">),</span> <span class="n">columns</span><span class="p">,</span> <span class="n">columns_len</span><span class="p">)</span>
+                    <span class="p">)</span>
+            <span class="k">return</span> <span class="n">params</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># The case with Params B: [1, 2, 3]</span>
+            <span class="c1"># Insert statements&#39; params are only passed as tuples or lists,</span>
+            <span class="c1"># yet for do_execute_update, we&#39;ve got to pass in list of list.</span>
+            <span class="c1"># https://googleapis.dev/python/spanner/latest/transaction-api.html\</span>
+            <span class="c1">#           #google.cloud.spanner_v1.transaction.Transaction.insert</span>
+            <span class="n">n_stride</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># This is the case where we have for example:</span>
+        <span class="c1"># SQL:      &#39;INSERT INTO t (f1, f2, f3) VALUES (%s, %s, %s),</span>
+        <span class="c1">#           (%s, %s, %s), (%s, %s, %s)&#39;</span>
+        <span class="c1"># Params:   [1, 2, 3, 4, 5, 6, 7, 8, 9]</span>
+        <span class="c1">#    which should become</span>
+        <span class="c1"># Columns:      (f1, f2, f3)</span>
+        <span class="c1"># new_params:   [(1, 2, 3,), (4, 5, 6,), (7, 8, 9,)]</span>
+
+        <span class="c1"># Sanity check 1: all the pyformat_values should have the exact same</span>
+        <span class="c1"># length.</span>
+        <span class="n">first</span><span class="p">,</span> <span class="n">rest</span> <span class="o">=</span> <span class="n">pyformat_args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">pyformat_args</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="n">n_stride</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">pyfmt_value</span> <span class="ow">in</span> <span class="n">rest</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="n">pyfmt_value</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">n_stride</span> <span class="o">!=</span> <span class="n">n</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">Error</span><span class="p">(</span>
+                    <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">len(`</span><span class="si">%s</span><span class="s2">`)=</span><span class="si">%d</span><span class="se">\n</span><span class="s2">!=</span><span class="se">\n</span><span class="s2">len(`</span><span class="si">%s</span><span class="s2">`)=</span><span class="si">%d</span><span class="s2">&quot;</span>
+                    <span class="o">%</span> <span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">n_stride</span><span class="p">,</span> <span class="n">pyfmt_value</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+                <span class="p">)</span>
+
+        <span class="c1"># Sanity check 2: len(params) MUST be a multiple of n_stride aka</span>
+        <span class="c1"># len(count of %s).</span>
+        <span class="c1"># so that we can properly group for example:</span>
+        <span class="c1">#  Given pyformat args:</span>
+        <span class="c1">#   (%s, %s, %s)</span>
+        <span class="c1">#  Params:</span>
+        <span class="c1">#   [1, 2, 3, 4, 5, 6, 7, 8, 9]</span>
+        <span class="c1"># into</span>
+        <span class="c1">#   [(1, 2, 3), (4, 5, 6), (7, 8, 9)]</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="o">%</span> <span class="n">n_stride</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ProgrammingError</span><span class="p">(</span>
+                <span class="s2">&quot;Invalid length: len(params)=</span><span class="si">%d</span><span class="s2"> MUST be a multiple of &quot;</span>
+                <span class="s2">&quot;len(pyformat_args)=</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">),</span> <span class="n">n_stride</span><span class="p">)</span>
+            <span class="p">)</span>
+
+    <span class="c1"># Now chop up the strides.</span>
+    <span class="n">strides</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">),</span> <span class="n">n_stride</span><span class="p">):</span>
+        <span class="n">stride</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="n">step</span> <span class="p">:</span> <span class="n">step</span> <span class="o">+</span> <span class="n">n_stride</span> <span class="p">:])</span>
+        <span class="n">strides</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">stride</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">strides</span></div>
+
+
+<div class="viewcode-block" id="sql_pyformat_args_to_spanner"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parse_utils.sql_pyformat_args_to_spanner">[docs]</a><span class="k">def</span> <span class="nf">sql_pyformat_args_to_spanner</span><span class="p">(</span><span class="n">sql</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Transform pyformat set SQL to named arguments for Cloud Spanner.</span>
+<span class="sd">    It will also unescape previously escaped format specifiers</span>
+<span class="sd">    like %%s to %s.</span>
+<span class="sd">    For example:</span>
+<span class="sd">        SQL:      &#39;SELECT * from t where f1=%s, f2=%s, f3=%s&#39;</span>
+<span class="sd">        Params:   (&#39;a&#39;, 23, &#39;888***&#39;)</span>
+<span class="sd">    becomes:</span>
+<span class="sd">        SQL:      &#39;SELECT * from t where f1=@a0, f2=@a1, f3=@a2&#39;</span>
+<span class="sd">        Params:   {&#39;a0&#39;: &#39;a&#39;, &#39;a1&#39;: 23, &#39;a2&#39;: &#39;888***&#39;}</span>
+
+<span class="sd">    OR</span>
+<span class="sd">        SQL:      &#39;SELECT * from t where f1=%(f1)s, f2=%(f2)s, f3=%(f3)s&#39;</span>
+<span class="sd">        Params:   {&#39;f1&#39;: &#39;a&#39;, &#39;f2&#39;: 23, &#39;f3&#39;: &#39;888***&#39;, &#39;extra&#39;: &#39;aye&#39;)</span>
+<span class="sd">    becomes:</span>
+<span class="sd">        SQL:      &#39;SELECT * from t where f1=@a0, f2=@a1, f3=@a2&#39;</span>
+<span class="sd">        Params:   {&#39;a0&#39;: &#39;a&#39;, &#39;a1&#39;: 23, &#39;a2&#39;: &#39;888***&#39;}</span>
+
+<span class="sd">    :type sql: str</span>
+<span class="sd">    :param sql: A SQL request.</span>
+
+<span class="sd">    :type params: list</span>
+<span class="sd">    :param params: A list of parameters.</span>
+
+<span class="sd">    :rtype: tuple(str, dict)</span>
+<span class="sd">    :returns: A tuple of the sanitized SQL and a dictionary of the named arguments.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">params</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">sanitize_literals_for_upload</span><span class="p">(</span><span class="n">sql</span><span class="p">),</span> <span class="n">params</span>
+
+    <span class="n">found_pyformat_placeholders</span> <span class="o">=</span> <span class="n">RE_PYFORMAT</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
+    <span class="n">params_is_dict</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">params_is_dict</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">found_pyformat_placeholders</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">sanitize_literals_for_upload</span><span class="p">(</span><span class="n">sql</span><span class="p">),</span> <span class="n">params</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">n_params</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="k">if</span> <span class="n">params</span> <span class="k">else</span> <span class="mi">0</span>
+        <span class="n">n_matches</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">found_pyformat_placeholders</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n_matches</span> <span class="o">!=</span> <span class="n">n_params</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Error</span><span class="p">(</span>
+                <span class="s2">&quot;pyformat_args mismatch</span><span class="se">\n</span><span class="s2">got </span><span class="si">%d</span><span class="s2"> args from </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="s2">&quot;want </span><span class="si">%d</span><span class="s2"> args in </span><span class="si">%s</span><span class="s2">&quot;</span>
+                <span class="o">%</span> <span class="p">(</span><span class="n">n_matches</span><span class="p">,</span> <span class="n">found_pyformat_placeholders</span><span class="p">,</span> <span class="n">n_params</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+            <span class="p">)</span>
+
+    <span class="n">named_args</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1"># We&#39;ve now got for example:</span>
+    <span class="c1"># Case a) Params is a non-dict</span>
+    <span class="c1">#   SQL:      &#39;SELECT * from t where f1=%s, f2=%s, f3=%s&#39;</span>
+    <span class="c1">#   Params:   (&#39;a&#39;, 23, &#39;888***&#39;)</span>
+    <span class="c1"># Case b) Params is a dict and the matches are %(value)s&#39;</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">pyfmt</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">found_pyformat_placeholders</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="s2">&quot;a</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">i</span>
+        <span class="n">sql</span> <span class="o">=</span> <span class="n">sql</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">pyfmt</span><span class="p">,</span> <span class="s2">&quot;@&quot;</span> <span class="o">+</span> <span class="n">key</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">params_is_dict</span><span class="p">:</span>
+            <span class="c1"># The &#39;%(key)s&#39; case, so interpolate it.</span>
+            <span class="n">resolved_value</span> <span class="o">=</span> <span class="n">pyfmt</span> <span class="o">%</span> <span class="n">params</span>
+            <span class="n">named_args</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">resolved_value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">named_args</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">cast_for_spanner</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">sanitize_literals_for_upload</span><span class="p">(</span><span class="n">sql</span><span class="p">),</span> <span class="n">named_args</span></div>
+
+
+<div class="viewcode-block" id="cast_for_spanner"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parse_utils.cast_for_spanner">[docs]</a><span class="k">def</span> <span class="nf">cast_for_spanner</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert the param to its Cloud Spanner equivalent type.</span>
+
+<span class="sd">    :type value: Any</span>
+<span class="sd">    :param value: The value to convert to a Cloud Spanner type.</span>
+
+<span class="sd">    :rtype: Any</span>
+<span class="sd">    :returns: The value converted to a Cloud Spanner type.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">decimal</span><span class="o">.</span><span class="n">Decimal</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span></div>
+
+
+<div class="viewcode-block" id="get_param_types"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parse_utils.get_param_types">[docs]</a><span class="k">def</span> <span class="nf">get_param_types</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Determine Cloud Spanner types for the given parameters.</span>
+
+<span class="sd">    :type params: dict</span>
+<span class="sd">    :param params: Parameters requiring to find Cloud Spanner types.</span>
+
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    :returns: The types index for the given parameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="n">param_types</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">type_</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">type_</span> <span class="ow">in</span> <span class="n">TYPES_MAP</span><span class="p">:</span>
+            <span class="n">param_types</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">TYPES_MAP</span><span class="p">[</span><span class="n">type_</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">param_types</span></div>
+
+
+<div class="viewcode-block" id="ensure_where_clause"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parse_utils.ensure_where_clause">[docs]</a><span class="k">def</span> <span class="nf">ensure_where_clause</span><span class="p">(</span><span class="n">sql</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Cloud Spanner requires a WHERE clause on UPDATE and DELETE statements.</span>
+<span class="sd">    Add a dummy WHERE clause if necessary.</span>
+
+<span class="sd">    :type sql: str</span>
+<span class="sd">    :param sql: A SQL request.</span>
+
+<span class="sd">    :rtype: str</span>
+<span class="sd">    :returns: A SQL request with dummy WHERE clause if necessary.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">sqlparse</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">Where</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">sqlparse</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">sql</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="n">sql</span>
+    <span class="k">return</span> <span class="n">sql</span> <span class="o">+</span> <span class="s2">&quot; WHERE 1=1&quot;</span></div>
+
+
+<div class="viewcode-block" id="escape_name"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.parse_utils.escape_name">[docs]</a><span class="k">def</span> <span class="nf">escape_name</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Apply backticks to the name that either contain &#39;-&#39; or</span>
+<span class="sd">    &#39; &#39;, or is a Cloud Spanner&#39;s reserved keyword.</span>
+
+<span class="sd">    :type name: :class:`str`</span>
+<span class="sd">    :param name: The name to escape.</span>
+
+<span class="sd">    :rtype: :class:`str`</span>
+<span class="sd">    :returns: The name escaped if it has to be escaped.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;-&quot;</span> <span class="ow">in</span> <span class="n">name</span> <span class="ow">or</span> <span class="s2">&quot; &quot;</span> <span class="ow">in</span> <span class="n">name</span> <span class="ow">or</span> <span class="n">name</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">SPANNER_RESERVED_KEYWORDS</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;`&quot;</span> <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;`&quot;</span>
+    <span class="k">return</span> <span class="n">name</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">google-cloud-spanner-django</a></h1>
+
+
+
+<p class="blurb">Django API Libraries for google-cloud-spanner</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=googleapis&repo=python-spanner-django&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../connection-usage.html">DB API Connection</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api-reference.html">API Reference</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Changelog</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Google.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.3.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/googleapis/python-spanner-django" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

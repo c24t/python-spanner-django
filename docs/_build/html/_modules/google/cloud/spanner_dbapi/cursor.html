@@ -1,0 +1,463 @@
+
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>google.cloud.spanner_dbapi.cursor &#8212; google-cloud-spanner-django 2.2.0a1 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for google.cloud.spanner_dbapi.cursor</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2020 Google LLC</span>
+<span class="c1">#</span>
+<span class="c1"># Use of this source code is governed by a BSD-style</span>
+<span class="c1"># license that can be found in the LICENSE file or at</span>
+<span class="c1"># https://developers.google.com/open-source/licenses/bsd</span>
+
+<span class="sd">&quot;&quot;&quot;Database cursor for Google Cloud Spanner DB-API.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">google.api_core.exceptions</span> <span class="kn">import</span> <span class="n">AlreadyExists</span>
+<span class="kn">from</span> <span class="nn">google.api_core.exceptions</span> <span class="kn">import</span> <span class="n">FailedPrecondition</span>
+<span class="kn">from</span> <span class="nn">google.api_core.exceptions</span> <span class="kn">import</span> <span class="n">InternalServerError</span>
+<span class="kn">from</span> <span class="nn">google.api_core.exceptions</span> <span class="kn">import</span> <span class="n">InvalidArgument</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+
+<span class="kn">from</span> <span class="nn">google.cloud</span> <span class="kn">import</span> <span class="n">spanner_v1</span> <span class="k">as</span> <span class="n">spanner</span>
+
+<span class="kn">from</span> <span class="nn">google.cloud.spanner_dbapi.exceptions</span> <span class="kn">import</span> <span class="n">IntegrityError</span>
+<span class="kn">from</span> <span class="nn">google.cloud.spanner_dbapi.exceptions</span> <span class="kn">import</span> <span class="n">InterfaceError</span>
+<span class="kn">from</span> <span class="nn">google.cloud.spanner_dbapi.exceptions</span> <span class="kn">import</span> <span class="n">OperationalError</span>
+<span class="kn">from</span> <span class="nn">google.cloud.spanner_dbapi.exceptions</span> <span class="kn">import</span> <span class="n">ProgrammingError</span>
+
+<span class="kn">from</span> <span class="nn">google.cloud.spanner_dbapi</span> <span class="kn">import</span> <span class="n">_helpers</span>
+<span class="kn">from</span> <span class="nn">google.cloud.spanner_dbapi._helpers</span> <span class="kn">import</span> <span class="n">ColumnInfo</span>
+<span class="kn">from</span> <span class="nn">google.cloud.spanner_dbapi._helpers</span> <span class="kn">import</span> <span class="n">code_to_display_size</span>
+
+<span class="kn">from</span> <span class="nn">google.cloud.spanner_dbapi</span> <span class="kn">import</span> <span class="n">parse_utils</span>
+<span class="kn">from</span> <span class="nn">google.cloud.spanner_dbapi.parse_utils</span> <span class="kn">import</span> <span class="n">get_param_types</span>
+<span class="kn">from</span> <span class="nn">google.cloud.spanner_dbapi.utils</span> <span class="kn">import</span> <span class="n">PeekIterator</span>
+
+<span class="n">_UNSET_COUNT</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+<span class="n">ColumnDetails</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;column_details&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;null_ok&quot;</span><span class="p">,</span> <span class="s2">&quot;spanner_type&quot;</span><span class="p">])</span>
+
+
+<div class="viewcode-block" id="Cursor"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.cursor.Cursor">[docs]</a><span class="k">class</span> <span class="nc">Cursor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Database cursor to manage the context of a fetch operation.</span>
+
+<span class="sd">    :type connection: :class:`~google.cloud.spanner_dbapi.connection.Connection`</span>
+<span class="sd">    :param connection: A DB-API connection to Google Cloud Spanner.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_itr</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_result_set</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_row_count</span> <span class="o">=</span> <span class="n">_UNSET_COUNT</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connection</span> <span class="o">=</span> <span class="n">connection</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_closed</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># the number of rows to fetch at a time with fetchmany()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arraysize</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_closed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The cursor close indicator.</span>
+
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        :returns: True if the cursor or the parent connection is closed,</span>
+<span class="sd">                  otherwise False.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_closed</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">is_closed</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">description</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read-only attribute containing a sequence of the following items:</span>
+
+<span class="sd">        -   ``name``</span>
+<span class="sd">        -   ``type_code``</span>
+<span class="sd">        -   ``display_size``</span>
+<span class="sd">        -   ``internal_size``</span>
+<span class="sd">        -   ``precision``</span>
+<span class="sd">        -   ``scale``</span>
+<span class="sd">        -   ``null_ok``</span>
+
+<span class="sd">        :rtype: tuple</span>
+<span class="sd">        :returns: A tuple of columns&#39; information.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_result_set</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_result_set</span><span class="o">.</span><span class="n">metadata</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">row_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_result_set</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">row_type</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">row_type</span><span class="o">.</span><span class="n">fields</span><span class="p">:</span>
+            <span class="n">column_info</span> <span class="o">=</span> <span class="n">ColumnInfo</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">field</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">type_code</span><span class="o">=</span><span class="n">field</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">code</span><span class="p">,</span>
+                <span class="c1"># Size of the SQL type of the column.</span>
+                <span class="n">display_size</span><span class="o">=</span><span class="n">code_to_display_size</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">code</span><span class="p">),</span>
+                <span class="c1"># Client perceived size of the column.</span>
+                <span class="n">internal_size</span><span class="o">=</span><span class="n">field</span><span class="o">.</span><span class="n">ByteSize</span><span class="p">(),</span>
+            <span class="p">)</span>
+            <span class="n">columns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">column_info</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">rowcount</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The number of rows produced by the last `.execute()`.</span>
+
+<span class="sd">        :rtype: int</span>
+<span class="sd">        :returns: The number of rows produced by the last .execute*().</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_row_count</span>
+
+    <span class="k">def</span> <span class="nf">_raise_if_closed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Raise an exception if this cursor is closed.</span>
+
+<span class="sd">        Helper to check this cursor&#39;s state before running a</span>
+<span class="sd">        SQL/DDL/DML query. If the parent connection is</span>
+<span class="sd">        already closed it also raises an error.</span>
+
+<span class="sd">        :raises: :class:`InterfaceError` if this cursor is closed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_closed</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InterfaceError</span><span class="p">(</span><span class="s2">&quot;Cursor and/or connection is already closed.&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Cursor.callproc"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.cursor.Cursor.callproc">[docs]</a>    <span class="k">def</span> <span class="nf">callproc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">procname</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;A no-op, raising an error if the cursor or connection is closed.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_raise_if_closed</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Cursor.close"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.cursor.Cursor.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Closes this Cursor, making it unusable from this point forward.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_closed</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+    <span class="k">def</span> <span class="nf">_do_execute_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transaction</span><span class="p">,</span> <span class="n">sql</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">param_types</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">sql</span> <span class="o">=</span> <span class="n">parse_utils</span><span class="o">.</span><span class="n">ensure_where_clause</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
+        <span class="n">sql</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="n">parse_utils</span><span class="o">.</span><span class="n">sql_pyformat_args_to_spanner</span><span class="p">(</span><span class="n">sql</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">transaction</span><span class="o">.</span><span class="n">execute_update</span><span class="p">(</span>
+            <span class="n">sql</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span> <span class="n">param_types</span><span class="o">=</span><span class="n">get_param_types</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_itr</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_row_count</span> <span class="o">=</span> <span class="n">result</span>
+
+        <span class="k">return</span> <span class="n">result</span>
+
+<div class="viewcode-block" id="Cursor.execute"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.cursor.Cursor.execute">[docs]</a>    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sql</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Prepares and executes a Spanner database operation.</span>
+
+<span class="sd">        :type sql: str</span>
+<span class="sd">        :param sql: A SQL query statement.</span>
+
+<span class="sd">        :type args: list</span>
+<span class="sd">        :param args: Additional parameters to supplement the SQL query.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ProgrammingError</span><span class="p">(</span><span class="s2">&quot;Cursor is not connected to the database&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_raise_if_closed</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_result_set</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Classify whether this is a read-only SQL statement.</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">classification</span> <span class="o">=</span> <span class="n">parse_utils</span><span class="o">.</span><span class="n">classify_stmt</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">classification</span> <span class="o">==</span> <span class="n">parse_utils</span><span class="o">.</span><span class="n">STMT_DDL</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">_ddl_statements</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
+                <span class="k">return</span>
+
+            <span class="c1"># For every other operation, we&#39;ve got to ensure that</span>
+            <span class="c1"># any prior DDL statements were run.</span>
+            <span class="c1"># self._run_prior_DDL_statements()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">run_prior_DDL_statements</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">autocommit</span><span class="p">:</span>
+                <span class="n">transaction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">transaction_checkout</span><span class="p">()</span>
+
+                <span class="n">sql</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="n">parse_utils</span><span class="o">.</span><span class="n">sql_pyformat_args_to_spanner</span><span class="p">(</span>
+                    <span class="n">sql</span><span class="p">,</span> <span class="n">args</span>
+                <span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">_result_set</span> <span class="o">=</span> <span class="n">transaction</span><span class="o">.</span><span class="n">execute_sql</span><span class="p">(</span>
+                    <span class="n">sql</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">param_types</span><span class="o">=</span><span class="n">get_param_types</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_itr</span> <span class="o">=</span> <span class="n">PeekIterator</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_result_set</span><span class="p">)</span>
+                <span class="k">return</span>
+
+            <span class="k">if</span> <span class="n">classification</span> <span class="o">==</span> <span class="n">parse_utils</span><span class="o">.</span><span class="n">STMT_NON_UPDATING</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_handle_DQL</span><span class="p">(</span><span class="n">sql</span><span class="p">,</span> <span class="n">args</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">classification</span> <span class="o">==</span> <span class="n">parse_utils</span><span class="o">.</span><span class="n">STMT_INSERT</span><span class="p">:</span>
+                <span class="n">_helpers</span><span class="o">.</span><span class="n">handle_insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="p">,</span> <span class="n">sql</span><span class="p">,</span> <span class="n">args</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">run_in_transaction</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_do_execute_update</span><span class="p">,</span> <span class="n">sql</span><span class="p">,</span> <span class="n">args</span> <span class="ow">or</span> <span class="kc">None</span>
+                <span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">AlreadyExists</span><span class="p">,</span> <span class="n">FailedPrecondition</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">IntegrityError</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">details</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="s2">&quot;details&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">InvalidArgument</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ProgrammingError</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">details</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="s2">&quot;details&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">InternalServerError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">OperationalError</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">details</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="s2">&quot;details&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">e</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Cursor.executemany"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.cursor.Cursor.executemany">[docs]</a>    <span class="k">def</span> <span class="nf">executemany</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operation</span><span class="p">,</span> <span class="n">seq_of_params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Execute the given SQL with every parameters set</span>
+<span class="sd">        from the given sequence of parameters.</span>
+
+<span class="sd">        :type operation: str</span>
+<span class="sd">        :param operation: SQL code to execute.</span>
+
+<span class="sd">        :type seq_of_params: list</span>
+<span class="sd">        :param seq_of_params: Sequence of additional parameters to run</span>
+<span class="sd">                              the query with.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_raise_if_closed</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">params</span> <span class="ow">in</span> <span class="n">seq_of_params</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">operation</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Cursor.fetchone"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.cursor.Cursor.fetchone">[docs]</a>    <span class="k">def</span> <span class="nf">fetchone</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fetch the next row of a query result set, returning a single</span>
+<span class="sd">        sequence, or None when no more data is available.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_raise_if_closed</span><span class="p">()</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="Cursor.fetchmany"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.cursor.Cursor.fetchmany">[docs]</a>    <span class="k">def</span> <span class="nf">fetchmany</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fetch the next set of rows of a query result, returning a sequence</span>
+<span class="sd">        of sequences. An empty sequence is returned when no more rows are available.</span>
+
+<span class="sd">        :type size: int</span>
+<span class="sd">        :param size: (Optional) The maximum number of results to fetch.</span>
+
+<span class="sd">        :raises InterfaceError:</span>
+<span class="sd">            if the previous call to .execute*() did not produce any result set</span>
+<span class="sd">            or if no call was issued yet.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_raise_if_closed</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">arraysize</span>
+
+        <span class="n">items</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">size</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="fm">__next__</span><span class="p">()))</span>
+            <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+                <span class="k">break</span>
+
+        <span class="k">return</span> <span class="n">items</span></div>
+
+<div class="viewcode-block" id="Cursor.fetchall"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.cursor.Cursor.fetchall">[docs]</a>    <span class="k">def</span> <span class="nf">fetchall</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fetch all (remaining) rows of a query result, returning them as</span>
+<span class="sd">        a sequence of sequences.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_raise_if_closed</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="fm">__iter__</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="Cursor.nextset"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.cursor.Cursor.nextset">[docs]</a>    <span class="k">def</span> <span class="nf">nextset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;A no-op, raising an error if the cursor or connection is closed.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_raise_if_closed</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Cursor.setinputsizes"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.cursor.Cursor.setinputsizes">[docs]</a>    <span class="k">def</span> <span class="nf">setinputsizes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sizes</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;A no-op, raising an error if the cursor or connection is closed.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_raise_if_closed</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Cursor.setoutputsize"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.cursor.Cursor.setoutputsize">[docs]</a>    <span class="k">def</span> <span class="nf">setoutputsize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">column</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;A no-op, raising an error if the cursor or connection is closed.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_raise_if_closed</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">_handle_DQL</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sql</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">snapshot</span><span class="p">()</span> <span class="k">as</span> <span class="n">snapshot</span><span class="p">:</span>
+            <span class="c1"># Reference</span>
+            <span class="c1">#  https://googleapis.dev/python/spanner/latest/session-api.html#google.cloud.spanner_v1.session.Session.execute_sql</span>
+            <span class="n">sql</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="n">parse_utils</span><span class="o">.</span><span class="n">sql_pyformat_args_to_spanner</span><span class="p">(</span><span class="n">sql</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">execute_sql</span><span class="p">(</span>
+                <span class="n">sql</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span> <span class="n">param_types</span><span class="o">=</span><span class="n">get_param_types</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">res</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_row_count</span> <span class="o">=</span> <span class="n">res</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_itr</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Immediately using:</span>
+                <span class="c1">#   iter(response)</span>
+                <span class="c1"># here, because this Spanner API doesn&#39;t provide</span>
+                <span class="c1"># easy mechanisms to detect when only a single item</span>
+                <span class="c1"># is returned or many, yet mixing results that</span>
+                <span class="c1"># are for .fetchone() with those that would result in</span>
+                <span class="c1"># many items returns a RuntimeError if .fetchone() is</span>
+                <span class="c1"># invoked and vice versa.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_result_set</span> <span class="o">=</span> <span class="n">res</span>
+                <span class="c1"># Read the first element so that the StreamedResultSet can</span>
+                <span class="c1"># return the metadata after a DQL statement. See issue #155.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_itr</span> <span class="o">=</span> <span class="n">PeekIterator</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_result_set</span><span class="p">)</span>
+                <span class="c1"># Unfortunately, Spanner doesn&#39;t seem to send back</span>
+                <span class="c1"># information about the number of rows available.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_row_count</span> <span class="o">=</span> <span class="n">_UNSET_COUNT</span>
+
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">etype</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">traceback</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__next__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_itr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ProgrammingError</span><span class="p">(</span><span class="s2">&quot;no results to return&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_itr</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_itr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ProgrammingError</span><span class="p">(</span><span class="s2">&quot;no results to return&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_itr</span>
+
+<div class="viewcode-block" id="Cursor.list_tables"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.cursor.Cursor.list_tables">[docs]</a>    <span class="k">def</span> <span class="nf">list_tables</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;List the tables of the linked Database.</span>
+
+<span class="sd">        :rtype: list</span>
+<span class="sd">        :returns: The list of tables within the Database.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_sql_in_snapshot</span><span class="p">(</span><span class="n">_helpers</span><span class="o">.</span><span class="n">SQL_LIST_TABLES</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Cursor.run_sql_in_snapshot"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.cursor.Cursor.run_sql_in_snapshot">[docs]</a>    <span class="k">def</span> <span class="nf">run_sql_in_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sql</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">param_types</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1"># Some SQL e.g. for INFORMATION_SCHEMA cannot be run in read-write transactions</span>
+        <span class="c1"># hence this method exists to circumvent that limit.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">run_prior_DDL_statements</span><span class="p">()</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">snapshot</span><span class="p">()</span> <span class="k">as</span> <span class="n">snapshot</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">execute_sql</span><span class="p">(</span>
+                <span class="n">sql</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span> <span class="n">param_types</span><span class="o">=</span><span class="n">param_types</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">res</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Cursor.get_table_column_schema"><a class="viewcode-back" href="../../../../spanner_dbapi.html#google.cloud.spanner_dbapi.cursor.Cursor.get_table_column_schema">[docs]</a>    <span class="k">def</span> <span class="nf">get_table_column_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">):</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_sql_in_snapshot</span><span class="p">(</span>
+            <span class="n">sql</span><span class="o">=</span><span class="n">_helpers</span><span class="o">.</span><span class="n">SQL_GET_TABLE_COLUMN_SCHEMA</span><span class="p">,</span>
+            <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;table_name&quot;</span><span class="p">:</span> <span class="n">table_name</span><span class="p">},</span>
+            <span class="n">param_types</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;table_name&quot;</span><span class="p">:</span> <span class="n">spanner</span><span class="o">.</span><span class="n">param_types</span><span class="o">.</span><span class="n">STRING</span><span class="p">},</span>
+        <span class="p">)</span>
+
+        <span class="n">column_details</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">column_name</span><span class="p">,</span> <span class="n">is_nullable</span><span class="p">,</span> <span class="n">spanner_type</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+            <span class="n">column_details</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">ColumnDetails</span><span class="p">(</span>
+                <span class="n">null_ok</span><span class="o">=</span><span class="n">is_nullable</span> <span class="o">==</span> <span class="s2">&quot;YES&quot;</span><span class="p">,</span> <span class="n">spanner_type</span><span class="o">=</span><span class="n">spanner_type</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">column_details</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">google-cloud-spanner-django</a></h1>
+
+
+
+<p class="blurb">Django API Libraries for google-cloud-spanner</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=googleapis&repo=python-spanner-django&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../connection-usage.html">DB API Connection</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api-reference.html">API Reference</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Changelog</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Google.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.3.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/googleapis/python-spanner-django" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
