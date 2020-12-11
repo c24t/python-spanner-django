@@ -42,7 +42,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
         # No Django transaction management in Spanner.
         "basic.tests.SelectOnSaveTests.test_select_on_save_lying_update",
         # django_spanner monkey patches AutoField to have a default value.
-        "basic.tests.ModelTest.test_hash",
+        # "basic.tests.ModelTest.test_hash",
         "generic_relations.test_forms.GenericInlineFormsetTests.test_options",
         "generic_relations.tests.GenericRelationsTests.test_unsaved_instance_on_generic_foreign_key",
         "generic_relations_regress.tests.GenericRelationTests.test_target_model_is_unsaved",
