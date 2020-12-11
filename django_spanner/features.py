@@ -21,7 +21,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     # Spanner uses REGEXP_CONTAINS which is case-sensitive.
     has_case_insensitive_like = False
     # https://cloud.google.com/spanner/quotas#query_limits
-    max_query_params = 950
+    max_query_params = 900
     supports_foreign_keys = False
     supports_ignore_conflicts = False
     supports_partial_indexes = False
@@ -42,7 +42,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
         # No Django transaction management in Spanner.
         "basic.tests.SelectOnSaveTests.test_select_on_save_lying_update",
         # django_spanner monkey patches AutoField to have a default value.
-        "basic.tests.ModelTest.test_hash",
+        # "basic.tests.ModelTest.test_hash",
         "generic_relations.test_forms.GenericInlineFormsetTests.test_options",
         "generic_relations.tests.GenericRelationsTests.test_unsaved_instance_on_generic_foreign_key",
         "generic_relations_regress.tests.GenericRelationTests.test_target_model_is_unsaved",
@@ -326,17 +326,13 @@ class DatabaseFeatures(BaseDatabaseFeatures):
         "model_formsets.tests.ModelFormsetTest.test_prevent_change_outer_model_and_create_invalid_data",
         "model_formsets_regress.tests.FormfieldShouldDeleteFormTests.test_no_delete",
         "model_formsets_regress.tests.FormsetTests.test_extraneous_query_is_not_run",
+        # os.chmod() doesn't work on Kokoro?
+        "file_uploads.tests.DirectoryCreationTests.test_readonly_root",
+        # Tests that sometimes fail on Kokoro for unknown reasons.
+        "contenttypes_tests.test_models.ContentTypesTests.test_cache_not_shared_between_managers",
+        "migration_test_data_persistence.tests.MigrationDataNormalPersistenceTestCase.test_persistence",
+        "servers.test_liveserverthread.LiveServerThreadTest.test_closes_connections",
     )
-    # Kokoro-specific skips.
-    if os.environ.get("KOKORO_JOB_NAME"):
-        skip_tests += (
-            # os.chmod() doesn't work on Kokoro?
-            "file_uploads.tests.DirectoryCreationTests.test_readonly_root",
-            # Tests that sometimes fail on Kokoro for unknown reasons.
-            "contenttypes_tests.test_models.ContentTypesTests.test_cache_not_shared_between_managers",
-            "migration_test_data_persistence.tests.MigrationDataNormalPersistenceTestCase.test_persistence",
-            "servers.test_liveserverthread.LiveServerThreadTest.test_closes_connections",
-        )
 
     if os.environ.get("SPANNER_EMULATOR_HOST", None):
         # Some code isn't yet supported by the Spanner emulator.
@@ -1106,8 +1102,27 @@ class DatabaseFeatures(BaseDatabaseFeatures):
             "expressions.tests.ValueTests.test_update_TimeField_using_Value",  # noqa
             "expressions.tests.ValueTests.test_update_UUIDField_using_Value",  # noqa
             "fixtures.tests.FixtureLoadingTests.test_loaddata_error_message",  # noqa
+            "fixtures.tests.FixtureTransactionTests.test_format_discovery",  # noqa
             "fixtures.tests.ForwardReferenceTests.test_forward_reference_fk",  # noqa
             "fixtures.tests.ForwardReferenceTests.test_forward_reference_m2m",  # noqa
+            "flatpages_tests.test_csrf.FlatpageCSRFTests.test_view_authenticated_flatpage",  # noqa
+            "flatpages_tests.test_middleware.FlatpageMiddlewareTests.test_fallback_authenticated_flatpage",  # noqa
+            "flatpages_tests.test_middleware.FlatpageMiddlewareTests.test_view_authenticated_flatpage",  # noqa
+            "flatpages_tests.test_templatetags.FlatpageTemplateTagTests.test_get_flatpages_tag_for_user",  # noqa
+            "flatpages_tests.test_templatetags.FlatpageTemplateTagTests.test_get_flatpages_with_prefix_for_user",  # noqa
+            "flatpages_tests.test_views.FlatpageViewTests.test_view_authenticated_flatpage",  # noqa
+            "generic_inline_admin.tests.GenericAdminViewTest.test_basic_add_GET",  # noqa
+            "generic_inline_admin.tests.GenericAdminViewTest.test_basic_add_POST",  # noqa
+            "generic_inline_admin.tests.GenericAdminViewTest.test_basic_edit_GET",  # noqa
+            "generic_inline_admin.tests.GenericAdminViewTest.test_basic_edit_POST",  # noqa
+            "generic_inline_admin.tests.GenericInlineAdminParametersTest.testMaxNumParam",  # noqa
+            "generic_inline_admin.tests.GenericInlineAdminParametersTest.test_extra_param",  # noqa
+            "generic_inline_admin.tests.GenericInlineAdminParametersTest.test_get_max_num",  # noqa
+            "generic_inline_admin.tests.GenericInlineAdminParametersTest.test_get_min_num",  # noqa
+            "generic_inline_admin.tests.GenericInlineAdminParametersTest.test_min_num_param",  # noqa
+            "generic_inline_admin.tests.GenericInlineAdminParametersTest.test_no_param",  # noqa
+            "generic_inline_admin.tests.GenericInlineAdminWithUniqueTogetherTest.test_add",  # noqa
+            "generic_inline_admin.tests.GenericInlineAdminWithUniqueTogetherTest.test_delete",  # noqa
             "get_or_create.tests.GetOrCreateTests.test_get_or_create_invalid_params",  # noqa
             "get_or_create.tests.GetOrCreateTestsWithManualPKs.test_create_with_duplicate_primary_key",  # noqa
             "get_or_create.tests.GetOrCreateTestsWithManualPKs.test_get_or_create_raises_IntegrityError_plus_traceback",  # noqa

@@ -13,6 +13,7 @@ from django.db.models.sql.compiler import (
     SQLUpdateCompiler as BaseSQLUpdateCompiler,
 )
 from django.db.utils import DatabaseError
+from django_spanner.utils import add_dummy_where
 
 
 class SQLCompiler(BaseSQLCompiler):
@@ -90,6 +91,8 @@ class SQLCompiler(BaseSQLCompiler):
         params = []
         for part in args_parts:
             params.extend(part)
+
+        result = add_dummy_where(result)
         return result, params
 
 
